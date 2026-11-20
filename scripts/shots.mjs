@@ -363,8 +363,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           out.push(field() ? 'STILL-OPEN' : 'closed'); out.push(document.querySelector('[aria-current="true"][data-folder]')?.dataset.folder);
           const gifts = document.querySelector('[data-folder="local/gifts"]'); const r = gifts.getBoundingClientRect();
           gifts.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.top + 10, pageX: r.left + 20, pageY: r.top + 10 })); await tick();
-          const item = [...document.querySelectorAll('.p-contextmenu [role=menuitem]')].find(i => i.textContent.includes('New folder'));
-          out.push(item ? 'menu' : 'NO-MENU'); item?.querySelector('a, .p-contextmenu-item-link, .p-contextmenu-item-content')?.click(); await tick();
+          const item = [...document.querySelectorAll('.oui-files-menu [role=menuitem]')].find(i => i.textContent.includes('New folder'));
+          out.push(item && document.activeElement === item ? 'menu' : 'NO-MENU'); item?.click(); await tick();
           out.push(field()?.closest('[role=treeitem]')?.previousElementSibling?.dataset.folder ?? 'NO-FIELD'); out.push(field()?.value);
           await typeName(field().value, 'Escape'); out.push(field() ? 'STILL-OPEN' : 'left');
           } catch (e) { out.push('THREW ' + e.message); } return out.join(','); })()`);
