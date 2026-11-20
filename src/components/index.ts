@@ -13,6 +13,7 @@ export { default as OuiHint } from './OuiHint.vue';
 export { default as OuiIcon } from './OuiIcon.vue';
 export { default as OuiJob } from './OuiJob.vue';
 export { default as OuiKeyValue, type OuiFact } from './OuiKeyValue.vue';
+export { default as OuiMenu, type OuiMenuItem } from './OuiMenu.vue';
 export { default as OuiLevel } from './OuiLevel.vue';
 export { default as OuiPageHeader } from './OuiPageHeader.vue';
 export { default as OuiPanel } from './OuiPanel.vue';

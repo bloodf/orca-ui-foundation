@@ -1,4 +1,4 @@
-# Orca UI foundation 5.2.1 — Vue and PrimeVue
+# Orca UI foundation 5.3.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.2.1" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.3.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,14 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.3.0 rounds out `OuiFileBrowser`'s context menus, lets folders be dragged, and fixes its icons and card names. It is additive: no prop, slot or event is removed.
+
+- Right-click works everywhere in the browser. On a file or card it shows what it did in 5.2. On a folder it adds Refresh (a root offers only New folder and Refresh). The empty part of the list offers New folder, Select all, List/Grid and Refresh; the empty part of the tree offers New folder and Refresh. Refresh is a new `refresh` event, which `useFileBackend` handles by reading again; label it with `labels.refresh`.
+- `OuiMenu` is the menu itself, now its own component (`open(event, items)`), so a page can give its other lists the same menu; U1 Control uses it on its time-lapses. `OuiFileMenuItem` is now an alias of `OuiMenuItem`, which adds `separator` and `id` (`data-menu`, a test hook).
+- Folders can be dragged in the tree onto another folder of the same root, including the root itself, with the same ghost as files. Refused targets are dimmed: the folder itself, everything inside it, the folder it is already in, and other roots. The drop emits `move-folder`. This needs `foldersMovable`, which comes from `useFileBackend` when the backend has `moveFolder`. Files still drop on folders as before.
+- Icons, one family at one size: Rename is `rename` (pencil-line), Move to… is `folderMove` (folder-input), New folder is `folderPlus`, Delete is `trash`, Select all is `selectAll` (list-checks), and the view switch is `viewList`/`viewGrid` (layout-list, layout-grid). Menu icons are 16 px and muted until the item is hovered or focused. The `list`, `grid`, `edit` and `move` icons are unchanged for the pages that use them.
+- Grid cards show the name without its extension, on two lines at most with an ellipsis, breaking after `_`, `-`, `.` or a space rather than inside a word. The extension and the size go under the name, and the card's tooltip has the whole name.
 
 Version 5.2.1 keeps `OuiFileBrowser`'s context menu open until focus moves elsewhere in the page or the pointer is pressed outside it: the list's own focus keeping (after rows change) could take focus from a menu just opened and close it. Nothing else changes.
 
