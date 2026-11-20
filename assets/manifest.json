@@ -1,0 +1,165 @@
+{
+  "note": "Every generated or raster asset of the foundation. Nothing here is part of the shared snapshot (manifest.json): a plugin copies the one illustration it uses. Prompts contain no personal data. Earlier takes are kept beside the current source with a -v1/-v2 suffix and are not exported.",
+  "assets": [
+    {
+      "file": "illustrations/kobra-connect.webp",
+      "bytes": 8232,
+      "source": "generated/illus-kobra-connect.png",
+      "sourceBytes": 359578,
+      "earlierTakes": [
+        "illus-kobra-connect-v1.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#8669DD (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "A desktop 3D printer with an open frame and a moving bed, and beside it a separate low box holding four filament spools in a row; a dashed line with a small plug at its end runs from the printer toward the left edge, as if waiting to be connected. The four spools and the plug are in the accent colour. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #8669DD, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. Clean on Kobra Control's dark panel and on white.",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)",
+        "gallery/screens/KobraDash.vue (state=setup)"
+      ]
+    },
+    {
+      "file": "illustrations/u1-toolheads.webp",
+      "bytes": 5440,
+      "source": "generated/illus-u1-toolheads.png",
+      "sourceBytes": 807712,
+      "earlierTakes": [
+        "illus-u1-toolheads-v1.png",
+        "illus-u1-toolheads-v2.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#5479DA (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "An enclosed box-shaped 3D printer with a large front window, showing four small toolheads parked side by side along the top rail inside and one empty build plate below. The window interior is one flat light grey fill with no glow and no highlight. The four toolheads are in the accent colour; nothing else is. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #5479DA, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. The window is flat; the glow of the first take is gone.",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)",
+        "gallery/screens/U1Dash.vue (state=setup)"
+      ]
+    },
+    {
+      "file": "illustrations/spooler-shelf.webp",
+      "bytes": 18158,
+      "source": "generated/illus-spooler-shelf.png",
+      "sourceBytes": 885480,
+      "earlierTakes": [
+        "illus-spooler-shelf-v1.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#C2539C (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "A simple two-level shelf holding five filament spools seen from the side, with one empty place on the lower level marked by a dashed circle. Two of the spools have their filament winding in the accent colour, the others in light grey. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #C2539C, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. The windings are drawn as concentric turns, which makes this the largest file (18 kB).",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)"
+      ]
+    },
+    {
+      "file": "illustrations/calculator-quote.webp",
+      "bytes": 6326,
+      "source": "generated/illus-calculator-quote.png",
+      "sourceBytes": 484047,
+      "earlierTakes": [
+        "illus-calculator-quote-v1.png",
+        "illus-calculator-quote-v2.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#678920 (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "A small open-top 3D printed desk organiser seen from the front: one rectangular tray with three upright compartments of clearly different heights, like a pen holder, with two pencils standing in the tallest compartment. It sits on a flat build plate. A blank price tag hangs on a short string from its right side and a short stack of three coins stands beside it. The price tag and the coins are in the accent colour; the tag is blank. No windows, no wheels, no vehicle shapes. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #678920, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. Reads as a desk organiser with a price tag and coins.",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)"
+      ]
+    },
+    {
+      "file": "illustrations/organizer-plate.webp",
+      "bytes": 2434,
+      "source": "generated/illus-organizer-plate.png",
+      "sourceBytes": 765772,
+      "earlierTakes": [
+        "illus-organizer-plate-v1.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#2786AF (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "A square 3D printer build plate seen from directly above, drawn as a rounded square with a light grey fill, with seven parts of different simple shapes (rectangles, an L shape, a circle, a hexagon) packed closely together in one corner region with even gaps, and the rest of the plate empty. Three of the parts are in the accent colour, the others in white. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #2786AF, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. Delivered on an opaque white background; export.sh keys the outside of the plate to transparent.",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)",
+        "gallery/screens/OrganizerDock.vue (empty result)"
+      ]
+    },
+    {
+      "file": "illustrations/embedder-insert.webp",
+      "bytes": 3038,
+      "source": "generated/illus-embedder-insert.png",
+      "sourceBytes": 291183,
+      "earlierTakes": [
+        "illus-embedder-insert-v1.png",
+        "illus-embedder-insert-v2.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "accent": "#278B7E (holds at 3:1 or better on the plugin's dark panel and raised surface, on white and on its light page)",
+      "prompt": "A cut-away side view of a rectangular 3D printed block in light grey. In the middle of the block is a closed rectangular pocket holding a round disc magnet lying flat. The pocket is fully enclosed: a clearly visible layer of the block's own material, about one fifth of the block's height, covers the pocket on top, so the magnet is sealed inside. A small downward arrow above the block points at the pocket. The magnet and the arrow are in the accent colour. Flat vector-style illustration, straight-on front view, simple geometric shapes, even 12 px outlines in mid grey #7B8898, fills only in white #FFFFFF, light grey #DFE3E9, mid grey #7B8898 and one accent colour #278B7E, completely flat fills, no gradients, no glow, no soft shading, no blur, no shadows, no reflections, no texture, no background scenery, rounded corners, no text, no letters, no digits, no logos, no brand names, transparent background, subject centred with 10% margin, 1024 x 1024.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "sh assets/export.sh: trimmed, fitted to 320 x 320 on transparent, cwebp -q 82 -alpha_q 90 -m 6",
+      "review": "Accepted. The pocket is enclosed with a cover layer above the magnet.",
+      "usedIn": [
+        "gallery/screens/Kit.vue (state=art)"
+      ]
+    },
+    {
+      "file": "gallery/marks.ts (organizer)",
+      "source": "generated/mark-organizer.png",
+      "sourceBytes": 529736,
+      "earlierTakes": [],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "prompt": "App icon glyph for a tool that arranges parts on a 3D printer build plate. A square plate seen from directly above with rounded corners, drawn as a thick outline, containing four solid rectangles of different sizes packed tightly together with even gaps, like a solved packing puzzle. Single flat solid black glyph, no outline strokes thinner than 60 px, no gradients, no shading, no shadows, no perspective, bold simple geometry that stays readable at 16 px, centred with 12% margin, pure white background, no text, no letters, no logos.",
+      "batch": "generated/prompts-batch.txt",
+      "export": "redrawn by hand as inline SVG on a 24 px grid; the PNG is the reference only",
+      "review": "Accepted by the owner.",
+      "usedIn": [
+        "gallery/marks.ts"
+      ]
+    },
+    {
+      "file": "gallery/marks.ts (spooler)",
+      "source": "generated/mark-spooler.png",
+      "sourceBytes": 851510,
+      "earlierTakes": [
+        "mark-spooler-v1.png"
+      ],
+      "tool": "Codex CLI 0.169.0 (`codex exec --skip-git-repo-check -s workspace-write`), Codex image generation tool; agent model reported in its log as gpt-6-astra",
+      "runBy": "session lead, on the owner's direct instruction",
+      "date": "2026-11-15",
+      "prompt": "App icon glyph for a filament spool inventory tool: a spool of 3D printer filament seen face-on. From outside to centre: a thin circular rim, then a wide solid band of wound filament divided by two thin concentric circular gaps so it reads as turns of filament, then a small round empty hole in the centre. No spokes, no wheel arms, no cross shapes. One short strand of filament leaves the outer rim at the top right as a smooth tangent curve. Single flat solid black glyph, no gradients, no shading, no shadows, no perspective, no line thinner than 40 px, bold simple geometry that stays readable at 16 px, centred with 12% margin, pure white background, no text, no letters, no logos.",
+      "batch": "generated/prompts-batch-3.txt",
+      "export": "redrawn by hand as inline SVG on a 24 px grid; the PNG is the reference only",
+      "review": "Reads as a spool (concentric turns, strand leaving; no spokes). The vector in gallery/marks.ts keeps the simpler form drawn after the first take (one solid winding ring, hub, strand): the concentric gaps of this take close up below about 20 px. This PNG is the reference if the owner prefers the turns at large sizes.",
+      "usedIn": [
+        "gallery/marks.ts"
+      ]
+    }
+  ]
+}
