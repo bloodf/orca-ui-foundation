@@ -365,7 +365,12 @@ function onMenuKey(event: KeyboardEvent) {
   const items = [...(menuEl.value?.querySelectorAll<HTMLElement>('button:not(:disabled)') ?? [])]; const at = items.indexOf(document.activeElement as HTMLElement);
   items[(at + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
 }
-function onMenuOut(event: FocusEvent) { if (!menuEl.value?.contains(event.relatedTarget as Element | null)) closeMenu(); }
+// Closes when focus goes somewhere else on the page (Tab) or the pointer is pressed outside it; focus merely lost (to the
+// window, or for a moment while the list redraws) keeps it open.
+function onMenuOut(event: FocusEvent) { const to = event.relatedTarget; if (to instanceof Node && !menuEl.value?.contains(to)) closeMenu(); }
+function onOutsidePress(event: PointerEvent) { if (menu.value && !(event.target instanceof Node && menuEl.value?.contains(event.target))) closeMenu(); }
+watch(menu, (on, was) => { if (!!on === !!was) return; if (on) window.addEventListener('pointerdown', onOutsidePress, true); else window.removeEventListener('pointerdown', onOutsidePress, true); });
+onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutsidePress, true));
 function onFolderMenu(event: MouseEvent, id: string) {
   const off = editOff.value; const own = canEditFolder(id);
   openMenu(event, [
@@ -431,7 +436,8 @@ let hadFocus = false;
 // Sticky until onUpdated has read it: one change of the files can update this component twice in the same flush (the rows,
 // then the selection that the gone rows leave), and by the second time the focused row has already been removed.
 onBeforeUpdate(() => { hadFocus ||= !!list.value?.contains(document.activeElement); });
-function holdFocus() { if (!list.value?.contains(document.activeElement)) (table.value?.querySelector<HTMLElement>('.oui-files-row[tabindex="0"]') ?? list.value)?.focus(); }
+// Never from the context menu or a name field: they are this component's too, outside the list.
+function holdFocus() { if (menuEl.value?.contains(document.activeElement) || document.activeElement === nameInput) return; if (!list.value?.contains(document.activeElement)) (table.value?.querySelector<HTMLElement>('.oui-files-row[tabindex="0"]') ?? list.value)?.focus(); }
 onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
 </script>
 <template>
