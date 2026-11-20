@@ -23,6 +23,8 @@ const LUCIDE = {
   clock: 'clock', history: 'history', timer: 'timer', hourglass: 'hourglass', calendar: 'calendar', offline: 'wifi-off', plug: 'plug', zap: 'zap',
   chevronDown: 'chevron-down', chevronRight: 'chevron-right', refresh: 'refresh-cw', rotate: 'rotate-cw', search: 'search', filter: 'funnel',
   settings: 'sliders-horizontal', wrench: 'wrench', dashboard: 'layout-dashboard', files: 'files', file: 'file-text', folder: 'folder', folderPlus: 'folder-plus', grid: 'layout-grid', list: 'list',
+  // The file browser's actions, one family: rename (a pencil on a line), move into a folder, list and grid as layouts.
+  rename: 'pencil-line', folderMove: 'folder-input', selectAll: 'list-checks', viewList: 'layout-list', viewGrid: 'layout-grid',
   terminal: 'square-terminal', chart: 'chart-column', link: 'link', unlink: 'unlink', external: 'external-link', copy: 'copy', save: 'save',
   download: 'download', upload: 'upload', edit: 'pencil', trash: 'trash-2', archive: 'archive', undo: 'undo-2', more: 'ellipsis',
   pause: 'pause', play: 'play', stop: 'square', power: 'power', camera: 'camera', cameraOff: 'camera-off', video: 'video', eye: 'eye',
