@@ -32,7 +32,7 @@ const LUCIDE = {
   target: 'crosshair', ruler: 'ruler', tag: 'tag', rfid: 'nfc', drop: 'droplet', layers: 'layers', box: 'box', parcel: 'package',
   boxes: 'boxes', warehouse: 'warehouse', mapPin: 'map-pin', fill: 'grid-3x3', magnet: 'magnet', lock: 'lock', shieldCheck: 'shield-check',
   scale: 'scale', receipt: 'receipt', calculator: 'calculator', coins: 'coins', wallet: 'wallet', percent: 'percent', store: 'store',
-  truck: 'truck', user: 'user', note: 'sticky-note', clipboard: 'clipboard-list', languages: 'languages', hand: 'hand',
+  truck: 'truck', user: 'user', note: 'sticky-note', clipboard: 'clipboard-list', languages: 'languages', hand: 'hand', maximize: 'maximize-2', minimize: 'minimize-2',
 };
 // Drawn for the family: [tag, attributes][] in Lucide's node format.
 const p = d => ['path', { d }];

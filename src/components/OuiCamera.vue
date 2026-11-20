@@ -9,6 +9,7 @@ import { cameraOff } from '../icons';
  * loading and failed: one sentence and the way out, in the same box. The module's actions (rate, snapshot, on/off) go
  * in the OuiPanel header, not here. A page that plays the stream itself (a <video>, a canvas) puts its player in `#picture`
  * and says `state="live"`: give it the class `oui-camera-picture` and it fills the box like the built-in image.
+ * Another shape: set --oui-camera-w and --oui-camera-h on it (4 and 3, say); 16 and 9 by default.
  */
 const emit = defineEmits<{ /** The built-in picture has loaded a frame (each time `src` changes and loads). Not fired for a player in `#picture`. */ frame: [picture: HTMLImageElement] }>();
 const props = defineProps<{ /** `cover` (default) fills the 16:9 box and crops what does not fit; `contain` shows the whole picture, with bars when it is not 16:9. */ fit?: 'cover' | 'contain';
@@ -27,7 +28,7 @@ const shown = computed(() => { const state = props.state ?? (props.src ? 'live' 
   </div>
 </template>
 <style>
-.oui-camera { position: relative; display: grid; aspect-ratio: 16 / 9; min-height: 120px; overflow: hidden; background: var(--oui-inset); border-radius: 0 0 var(--oui-radius-lg) var(--oui-radius-lg); }
+.oui-camera { position: relative; display: grid; aspect-ratio: var(--oui-camera-w, 16) / var(--oui-camera-h, 9); min-height: 120px; overflow: hidden; background: var(--oui-inset); border-radius: 0 0 var(--oui-radius-lg) var(--oui-radius-lg); }
 .oui-camera-picture { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; }
 .oui-camera[data-fit='contain'] .oui-camera-picture { object-fit: contain; }
 .oui-camera > .oui-empty { min-height: 0; }
