@@ -107,6 +107,7 @@ export function useFileBackend(backend: OuiFileBackend, options: OuiFileBackendO
     move: ({ ids, to }: { ids: string[]; to: string }) => { const from = folder.value; void act('move', ids, () => backend.move!(ids, to, from), to); },
     delete: (ids: string[]) => { const from = folder.value; void act('delete', ids, () => backend.remove(ids, from)); },
     retry: () => { void reload(); },
+    refresh: () => { void reload(); },
     'move-folder': ({ id, to }: { id: string; to: string }) => { void act('move-folder', [id], async () => follow(id, await backend.moveFolder!(id, to)), to); },
     'delete-folder': (id: string) => { void act('delete-folder', [id], async () => { await backend.removeFolder!(id); if (inside(id)) { folder.value = folders.value.find(f => f.id === id)?.parent ?? ''; selected.value = []; } }); },
   };

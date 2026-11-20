@@ -82,14 +82,14 @@ const labels: OuiFileBrowserLabels = {
         <template v-if="flat"><span class="oui-spacer" /><Button :label="t('Refresh', 'Atualizar')" severity="secondary" text size="small" data-test="files-refresh" @click="files.reload()"><template #icon><OuiIcon :icon="I.refresh" :size="13" /></template></Button></template></template>
       <!-- What can be done to the open folder itself: the page's, beside the path. Not offered in a read-only folder. -->
       <template #folder="{ folder }">
-        <Button severity="secondary" text size="small" :disabled="!folder || folder.readonly || !folder.parent" :aria-label="t('Rename folder', 'Renomear pasta')" :title="t('Rename folder', 'Renomear pasta')"><template #icon><OuiIcon :icon="I.edit" :size="14" /></template></Button>
+        <Button severity="secondary" text size="small" :disabled="!folder || folder.readonly || !folder.parent" :aria-label="t('Rename folder', 'Renomear pasta')" :title="t('Rename folder', 'Renomear pasta')"><template #icon><OuiIcon :icon="I.rename" :size="14" /></template></Button>
         <Button severity="secondary" text size="small" :disabled="!folder || folder.readonly || !folder.parent" :aria-label="t('Delete folder', 'Excluir pasta')" :title="t('Delete folder', 'Excluir pasta')"><template #icon><OuiIcon :icon="I.trash" :size="14" /></template></Button>
       </template>
       <template #rail><div class="pf-space"><span class="oui-meta oui-num">{{ t('5.2 of 8 GB used', '5,2 de 8 GB usados') }}</span><OuiLevel :fraction="0.35" :label="t('Free space', 'Espaço livre')" /></div></template>
       <template #actions>
         <Button :label="t('Print', 'Imprimir')"><template #icon><OuiIcon :icon="I.printer" :size="14" /></template></Button>
         <Button :label="t('Download', 'Baixar')" severity="secondary"><template #icon><OuiIcon :icon="I.download" :size="14" /></template></Button>
-        <Button :label="t('Rename', 'Renomear')" severity="secondary" text><template #icon><OuiIcon :icon="I.edit" :size="14" /></template></Button>
+        <Button :label="t('Rename', 'Renomear')" severity="secondary" text><template #icon><OuiIcon :icon="I.rename" :size="14" /></template></Button>
       </template>
       <template #empty><Button :label="t('Upload', 'Enviar arquivo')" severity="secondary" size="small"><template #icon><OuiIcon :icon="I.upload" :size="13" /></template></Button></template>
     </OuiFileBrowser>
