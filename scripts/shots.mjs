@@ -315,10 +315,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           rows()[0].focus(); key(rows()[0], 'ArrowDown'); await tick(); key(document.activeElement, 'ArrowDown', { shiftKey: true }); await tick(); key(document.activeElement, 'ArrowDown', { shiftKey: true }); await tick(); out.push(count());
           key(document.activeElement, ' '); await tick(); out.push(count());
           key(document.activeElement, 'a', { ctrlKey: true }); await tick(); out.push(count()); key(document.activeElement, 'Escape'); await tick(); out.push(count());
-          click(rows()[2]); await tick(); const data = new DataTransfer();
-          rows()[5].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data })); await tick(); out.push('drag' + count());
-          const to = document.querySelector('[data-folder="local/gifts"]'); to.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data })); await tick(); out.push(to.dataset.drop ? 'lit' : 'DARK');
-          to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data })); await tick(); out.push(rows().length);
+          // 5.1.0: the drag is pointer events (OrcaSlicer's macOS web view never delivers HTML5 drops).
+          click(rows()[2]); await tick(); const to = document.querySelector('[data-folder="local/gifts"]');
+          const pointer = (target, type, over) => { const r = over.getBoundingClientRect(); target.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, button: 0, buttons: 1, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); };
+          pointer(rows()[5], 'pointerdown', rows()[5]); pointer(window, 'pointermove', to); await tick(); out.push('drag' + count());
+          out.push(to.dataset.drop ? 'lit' : 'DARK'); pointer(window, 'pointerup', to); await tick(); out.push(rows().length);
           click(rows()[0]); await tick(); rows()[0].focus(); key(rows()[0], 'Delete'); await new Promise(r => setTimeout(r, 400));
           const yes = document.querySelector('[data-dlg="confirm"]'); out.push(yes ? 'asked' : 'NOT-ASKED'); out.push(rows().length); yes?.click(); await new Promise(r => setTimeout(r, 400)); out.push(rows().length);
           const tree = document.querySelector('[data-folder="local/chroma"]'); tree.focus(); key(tree, 'ArrowRight'); await tick(); key(tree, 'ArrowDown'); await tick(); out.push(document.activeElement.dataset.folder);
@@ -341,6 +342,33 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           key(rows()[0], 'Delete'); await wait(); out.push(document.querySelector('[data-dlg="confirm"]') ? 'ASKED' : 'not-asked');
           return out.join(','); })()`);
         if (got !== '1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,not-a-target,3,1,no-delete,fixed,no-move,not-asked') bad.push('file browser interactions: ' + got);
+      }
+      if (screen === 'u1-files' && !state && width >= 1200 && lang === 'en') {
+        // 5.1.0: "New folder" beside the path makes one in the open folder, typed in the tree: a name that is refused says why
+        // and stays; Enter makes it and opens it; a folder's context menu makes one in that folder; Escape leaves.
+        const got = await evaluate(`(async () => {
+          const tick = () => new Promise(r => setTimeout(r, 120)); const out = []; try {
+          const field = () => document.querySelector('[data-files-newname]');
+          const typeName = async (v, key = 'Enter') => { const f = field(); f.value = v; f.dispatchEvent(new Event('input', { bubbles: true })); await tick(); f.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); await tick(); };
+          out.push(document.querySelector('[data-files-mkdir]') ? 'MKDIR-IN-READ-ONLY' : 'none-in-read-only');
+          document.querySelector('[data-folder="local/chroma"]').click(); await tick(); await tick();
+          document.querySelector('[data-files-mkdir]').click(); await tick();
+          out.push(field() === document.activeElement ? 'field-focused' : 'NOT-FOCUSED'); out.push(field().value);
+          out.push(field().closest('[role=treeitem]').getAttribute('aria-level'));
+          await typeName('a/b'); out.push(document.querySelector('.oui-files-nameerror')?.textContent.includes('/') ? 'slash-refused' : 'SLASH-OK');
+          await typeName(' x'); out.push(field()?.getAttribute('aria-invalid') === 'true' ? 'spaces-refused' : 'SPACES-OK');
+          const sibling = document.querySelector('[data-folder^="local/chroma/"] .oui-files-foldername')?.textContent;
+          await typeName(sibling.toUpperCase()); out.push(document.querySelector('.oui-files-nameerror')?.textContent.includes('already') ? 'taken-refused' : 'TAKEN-OK');
+          await typeName('Prints'); await new Promise(r => setTimeout(r, 400));
+          out.push(field() ? 'STILL-OPEN' : 'closed'); out.push(document.querySelector('[aria-current="true"][data-folder]')?.dataset.folder);
+          const gifts = document.querySelector('[data-folder="local/gifts"]'); const r = gifts.getBoundingClientRect();
+          gifts.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.top + 10, pageX: r.left + 20, pageY: r.top + 10 })); await tick();
+          const item = [...document.querySelectorAll('.p-contextmenu [role=menuitem]')].find(i => i.textContent.includes('New folder'));
+          out.push(item ? 'menu' : 'NO-MENU'); item?.querySelector('a, .p-contextmenu-item-link, .p-contextmenu-item-content')?.click(); await tick();
+          out.push(field()?.closest('[role=treeitem]')?.previousElementSibling?.dataset.folder ?? 'NO-FIELD'); out.push(field()?.value);
+          await typeName(field().value, 'Escape'); out.push(field() ? 'STILL-OPEN' : 'left');
+          } catch (e) { out.push('THREW ' + e.message); } return out.join(','); })()`);
+        if (got !== 'none-in-read-only,field-focused,New folder,3,slash-refused,spaces-refused,taken-refused,closed,local/chroma/Prints,menu,local/gifts,New folder,left') bad.push('file browser, new folder: ' + got);
       }
       if (screen === 'kobra-files' && !state && width >= 1200) {
         // The same component over a storage with no folders: no tree, no path, no "Move to", rows cannot be dragged;

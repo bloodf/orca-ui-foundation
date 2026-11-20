@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUpdate, onUpdated, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onBeforeUpdate, onUpdated, ref, watch } from 'vue';
 import Button from 'primevue/button';
+import ContextMenu from 'primevue/contextmenu';
 import Select from 'primevue/select';
 import OuiConfirm from './OuiConfirm.vue';
 import OuiEmpty from './OuiEmpty.vue';
 import OuiIcon from './OuiIcon.vue';
 import OuiKeyValue, { type OuiFact } from './OuiKeyValue.vue';
 import OuiThumb from './OuiThumb.vue';
-import { chevronDown, chevronRight, file as fileIcon, files as filesIcon, folder as folderIcon, trash, x as closeIcon } from '../icons';
+import { chevronDown, chevronRight, file as fileIcon, files as filesIcon, folder as folderIcon, folderPlus, trash, x as closeIcon } from '../icons';
 
 /*
  * The Files tab of a printer plugin: folders in a tree on the left, the open folder's files as a table in the middle,
@@ -19,6 +20,10 @@ import { chevronDown, chevronRight, file as fileIcon, files as filesIcon, folder
  * A storage with no folders (no `folders`, or an empty list) has no tree, no path and no "Move to": the table takes the
  * rail's place, and selecting and deleting work as they do with folders. A storage that has folders but cannot move
  * files (`movable` false) keeps the tree for browsing and has no "Move to" and no dragging.
+ *
+ * A storage that can make folders (`creatable`) offers "New folder" beside the path (in the open folder) and on a folder's
+ * context menu in the tree (in that folder): the name is typed in the tree, checked here (not empty, no '/', not '.' or
+ * '..', no spaces at its ends, at most 255 characters, not a name its siblings have) and sent as `create-folder`.
  *
  * Folders are shown in the tree only; the table lists files. What can be done to the open folder itself (rename it,
  * move it, delete it, make a folder in it) is the page's, in `#folder`, which gets that folder and sits beside the path.
@@ -38,7 +43,10 @@ export interface OuiFileBrowserLabels { folders: string; files: string; name: st
   items: (count: number) => string; selected: (count: number) => string; clear: string; moveTo: string; remove: string;
   removeTitle: (count: number) => string; removeText: string; andMore: (count: number) => string; cancel: string;
   empty: string; emptyText?: string; loading: string; nothingSelected: string; nothingSelectedText?: string;
-  /** For `error`: what failed, in one sentence (the error itself is shown under it), and the button that tries again. */ loadFailed?: string; retry?: string }
+  /** For `error`: what failed, in one sentence (the error itself is shown under it), and the button that tries again. */ loadFailed?: string; retry?: string;
+  /** For `creatable`: the button and the name a new folder starts with, the name field's accessible name, and why a typed name is refused. */
+  newFolder?: string; folderName?: string; folderError?: (reason: OuiFolderNameError) => string }
+export type OuiFolderNameError = 'empty' | 'invalid' | 'spaces' | 'long' | 'taken';
 
 const props = withDefaults(defineProps<{ /** The storage's folders, flat. None: the storage has no folders, and the tree and "Move to" are not shown. */ folders?: OuiFolder[];
   files: OuiFile[]; /** The open folder (v-model:folder); '' when there are no folders. */ folder?: string; /** Selected file ids (v-model:selected). */ selected: string[];
@@ -46,9 +54,10 @@ const props = withDefaults(defineProps<{ /** The storage's folders, flat. None: 
   /** The storage can move files between folders (default true). False: the tree stays, "Move to" and dragging go. */ movable?: boolean;
   /** The files could not be read: shown in place of the table, with `labels.loadFailed` and a `retry` button. */ error?: string | null;
   /** A move or delete is under way: the bulk actions wait for it. */ busy?: boolean;
+  /** Folders can be made (default false): "New folder" beside the path and on a folder's context menu in the tree. */ creatable?: boolean;
   /** The order the list opens in (default: by name). A printer's list usually reads newest first: `{ key: 'modified', down: true }`. The user can still sort by any column. */
-  sort?: { key: 'name' | 'size' | 'modified'; down?: boolean } }>(), { folders: () => [], folder: '', movable: true });
-const emit = defineEmits<{ 'update:folder': [id: string]; 'update:selected': [ids: string[]]; move: [payload: { ids: string[]; to: string }]; delete: [ids: string[]]; open: [id: string]; retry: [] }>();
+  sort?: { key: 'name' | 'size' | 'modified'; down?: boolean } }>(), { folders: () => [], folder: '', movable: true, creatable: false });
+const emit = defineEmits<{ 'update:folder': [id: string]; 'update:selected': [ids: string[]]; move: [payload: { ids: string[]; to: string }]; delete: [ids: string[]]; open: [id: string]; retry: []; 'create-folder': [payload: { parent: string; name: string }] }>();
 const hasTree = computed(() => props.folders.length > 0);
 const locked = computed(() => props.readonly || props.busy || !!byId.value.get(props.folder)?.readonly);
 
@@ -162,24 +171,118 @@ function askDelete(ids: string[] = props.selected) { if (!locked.value && ids.le
 function confirmDelete() { emit('delete', confirming.value); confirming.value = []; }
 const confirmNames = computed(() => confirming.value.slice(0, 4).map(id => props.files.find(f => f.id === id)?.name ?? id));
 
-// Drag and drop: the dragged row joins or replaces the selection, and folders that can take it light up.
+// Dragging files onto a folder. Pointer events, not HTML5 drag and drop: OrcaSlicer on macOS replaces WKWebView's drop
+// handling for the whole app (MacDarkMode.mm, `WKWebView (DragDrop)`) so a page never gets dragover or drop, while pointer
+// events reach the page in every web view (WKWebView, WebView2, WebKitGTK). Pressing a row and moving a few pixels starts
+// the drag: the dragged row joins or replaces the selection, a ghost (the file taken, and how many) follows the pointer,
+// folders that cannot take the files are dimmed, and only the folder under the pointer is marked. Releasing on a folder
+// that takes them moves them; anywhere else, or Escape, sends the ghost back to its row. "Move to" does the same from the keyboard.
+const DRAG_SLOP = 5;
 const dragging = ref<string[]>([]);
 const dropOn = ref<string | null>(null);
+const refused = ref(false);
 const ghost = ref<HTMLElement>();
-function onDragStart(event: DragEvent, id: string) {
-  if (!canMove.value || locked.value || !event.dataTransfer) { event.preventDefault(); return; }
-  const ids = picked.value.has(id) ? [...props.selected] : [id];
-  if (!picked.value.has(id)) { setSelected(ids); anchor.value = id; }
-  dragging.value = ids;
-  event.dataTransfer.effectAllowed = 'move';
-  event.dataTransfer.setData('text/plain', ids.map(x => props.files.find(f => f.id === x)?.name ?? x).join('\n'));
-  if (ghost.value) { ghost.value.textContent = props.labels.selected(ids.length); event.dataTransfer.setDragImage(ghost.value, 12, 12); }
+const grabbed = ref('');
+const ghostFile = computed(() => props.files.find(f => f.id === grabbed.value));
+let press: { id: string; x: number; y: number; row: HTMLElement; pointer: number } | null = null;
+let point = { x: 0, y: 0 }; let origin = { x: 0, y: 0 }; let frame = 0;
+const returning = ref(false);
+const active = computed(() => dragging.value.length > 0 && !returning.value);
+const canDrop = (id: string) => active.value && id !== props.folder && takes(byId.value.get(id));
+const place = () => { if (ghost.value) ghost.value.style.transform = `translate(${point.x - origin.x - 14}px, ${point.y - origin.y - 14}px)`; };
+function hover() {
+  const el = document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-folder]');
+  const id = el && tree.value?.contains(el) ? el.dataset.folder ?? null : null;
+  dropOn.value = id && canDrop(id) ? id : null; refused.value = !!id && !dropOn.value;
+  document.documentElement.dataset.ouiDrag = refused.value ? 'refused' : 'move';
 }
-const canDrop = (id: string) => dragging.value.length > 0 && id !== props.folder && takes(byId.value.get(id));
-function onDragOver(event: DragEvent, id: string) { if (!canDrop(id)) return; event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'; dropOn.value = id; }
-function onDragLeave(id: string) { if (dropOn.value === id) dropOn.value = null; }
-function onDrop(event: DragEvent, id: string) { if (!canDrop(id)) return; event.preventDefault(); const ids = dragging.value; dragging.value = []; dropOn.value = null; move(id, ids); }
-function onDragEnd() { dragging.value = []; dropOn.value = null; }
+// The release ends a drag, not a click: the click that follows on the row would select it alone again.
+function eatClick() { const eat = (e: Event) => { e.stopPropagation(); e.preventDefault(); }; window.addEventListener('click', eat, { capture: true, once: true }); setTimeout(() => window.removeEventListener('click', eat, true)); }
+function onRowPointerDown(event: PointerEvent, id: string) {
+  if (event.button !== 0 || !event.isPrimary || returning.value || !canMove.value || locked.value || (event.target as HTMLElement).closest('input, button')) return;
+  press = { id, x: event.clientX, y: event.clientY, row: event.currentTarget as HTMLElement, pointer: event.pointerId };
+  window.addEventListener('pointermove', onDragMove); window.addEventListener('pointerup', onDragUp); window.addEventListener('pointercancel', onDragCancel); window.addEventListener('keydown', onDragKey, true);
+}
+function startDrag() {
+  if (!press) return;
+  const ids = picked.value.has(press.id) ? [...props.selected] : [press.id];
+  if (!picked.value.has(press.id)) { setSelected(ids); anchor.value = press.id; }
+  dragging.value = ids; grabbed.value = press.id;
+  try { press.row.setPointerCapture(press.pointer); } catch { /* the pointer is already gone: the up that follows ends the drag */ }
+  nextTick(() => { if (!ghost.value) return; ghost.value.style.transform = 'none'; const r = ghost.value.getBoundingClientRect(); origin = { x: r.left, y: r.top }; place(); });
+  hover();
+}
+function onDragMove(event: PointerEvent) {
+  if (!press || event.pointerId !== press.pointer) return;
+  point = { x: event.clientX, y: event.clientY };
+  if (!dragging.value.length) { if (Math.hypot(point.x - press.x, point.y - press.y) < DRAG_SLOP) return; startDrag(); }
+  if (!frame) frame = requestAnimationFrame(() => { frame = 0; place(); hover(); });
+}
+function endDrag() {
+  window.removeEventListener('pointermove', onDragMove); window.removeEventListener('pointerup', onDragUp); window.removeEventListener('pointercancel', onDragCancel); window.removeEventListener('keydown', onDragKey, true);
+  cancelAnimationFrame(frame); frame = 0; delete document.documentElement.dataset.ouiDrag;
+  dropOn.value = null; refused.value = false; press = null;
+}
+// The ghost goes back to the row it came from, then away; at once when motion is reduced.
+function sendBack(row: HTMLElement) {
+  const ids = dragging.value; endDrag();
+  const el = ghost.value; const r = row.getBoundingClientRect();
+  if (!el || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { dragging.value = []; return; }
+  returning.value = true;
+  el.animate([{ transform: el.style.transform }, { transform: `translate(${r.left - origin.x}px, ${r.top + (r.height - el.offsetHeight) / 2 - origin.y}px)`, opacity: 0 }],
+    { duration: 180, easing: 'cubic-bezier(.2, 0, 0, 1)' }).onfinish = () => { returning.value = false; if (dragging.value === ids) dragging.value = []; };
+}
+function onDragUp(event: PointerEvent) {
+  if (!press || event.pointerId !== press.pointer) return;
+  if (!dragging.value.length) { endDrag(); return; }
+  eatClick();
+  point = { x: event.clientX, y: event.clientY }; hover();
+  const to = dropOn.value; const row = press.row;
+  if (!to) { sendBack(row); return; }
+  const ids = dragging.value; endDrag(); dragging.value = []; move(to, ids);
+}
+function onDragCancel(event: PointerEvent) { if (press && event.pointerId === press.pointer) { if (dragging.value.length) sendBack(press.row); else endDrag(); } }
+function onDragKey(event: KeyboardEvent) { if (event.key !== 'Escape' || !press || !dragging.value.length) return; event.preventDefault(); event.stopPropagation(); sendBack(press.row);
+  window.addEventListener('pointerup', eatClick, { capture: true, once: true }); }
+onBeforeUnmount(() => { if (press) endDrag(); });
+
+// New folder: a name field in the tree, under the folder it goes in, prefilled with a name no sibling has.
+const FOLDER_ERRORS: Record<OuiFolderNameError, string> = { empty: 'Type a name.', invalid: "A name can't contain / or be . or ..", spaces: "A name can't start or end with a space.",
+  long: 'A name has at most 255 characters.', taken: 'This folder already has one with that name.' };
+const naming = ref<{ parent: string; name: string; error: string } | null>(null);
+const nameInput = ref<HTMLInputElement[]>([]);
+const menu = ref<InstanceType<typeof ContextMenu>>();
+const menuFolder = ref('');
+const canCreate = (id: string) => props.creatable && hasTree.value && !!byId.value.get(id) && !byId.value.get(id)?.readonly;
+const createOff = computed(() => props.readonly || props.busy);
+const siblings = (parent: string) => new Set((children.value.get(parent) ?? []).map(f => f.name.toLowerCase()));
+function startNew(parent: string) {
+  if (!canCreate(parent) || createOff.value) return;
+  const taken = siblings(parent); const base = props.labels.newFolder ?? 'New folder';
+  let name = base; for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${base} ${n}`;
+  toggle(parent, true); naming.value = { parent, name, error: '' };
+  nextTick(() => { nameInput.value[0]?.focus(); nameInput.value[0]?.select(); });
+}
+function folderNameError(parent: string, name: string): OuiFolderNameError | null {
+  if (!name.trim()) return 'empty';
+  if (/[/\\]/.test(name) || name === '.' || name === '..') return 'invalid';
+  if (name !== name.trim()) return 'spaces';
+  if (name.length > 255) return 'long';
+  return siblings(parent).has(name.toLowerCase()) ? 'taken' : null;
+}
+function commitNew() {
+  const n = naming.value; if (!n) return;
+  const reason = folderNameError(n.parent, n.name);
+  if (reason) { n.error = props.labels.folderError?.(reason) ?? FOLDER_ERRORS[reason]; return; }
+  naming.value = null; emit('create-folder', { parent: n.parent, name: n.name }); focusFolder(n.parent);
+}
+function cancelNew() { const n = naming.value; naming.value = null; if (n) focusFolder(n.parent); }
+function onNameKey(event: KeyboardEvent) {
+  event.stopPropagation();   // the tree's own keys (arrows, Space, Enter) are not for the field
+  if (event.key === 'Enter') { event.preventDefault(); commitNew(); } else if (event.key === 'Escape') { event.preventDefault(); cancelNew(); }
+}
+const menuItems = computed(() => [{ label: props.labels.newFolder ?? 'New folder', disabled: !canCreate(menuFolder.value) || createOff.value, command: () => startNew(menuFolder.value) }]);
+function onFolderMenu(event: MouseEvent, id: string) { if (!props.creatable) return; menuFolder.value = id; menu.value?.show(event); }
 
 const one = computed(() => (pickedRows.value.length === 1 ? pickedRows.value[0] : null));
 
@@ -195,18 +298,24 @@ function holdFocus() { if (!list.value?.contains(document.activeElement)) (table
 onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
 </script>
 <template>
-  <div class="oui-files"><div class="oui-files-grid" :data-flat="!hasTree || undefined" :data-dragging="dragging.length ? true : undefined">
+  <div class="oui-files"><div class="oui-files-grid" :data-flat="!hasTree || undefined" :data-dragging="active || undefined">
     <nav v-if="hasTree" class="oui-files-rail" :aria-label="labels.folders">
       <p class="oui-label oui-files-railhead">{{ labels.folders }}</p>
       <div ref="tree" class="oui-files-tree" role="tree" :aria-label="labels.folders" @keydown="onTreeKey">
-        <div v-for="node in nodes" :key="node.folder.id" role="treeitem" class="oui-files-folder" :data-folder="node.folder.id" :aria-level="node.depth" :aria-expanded="node.branch ? node.open : undefined"
+        <template v-for="node in nodes" :key="node.folder.id"><div role="treeitem" class="oui-files-folder" :data-folder="node.folder.id" :aria-level="node.depth" :aria-expanded="node.branch ? node.open : undefined"
           :aria-selected="node.folder.id === folder" :aria-current="node.folder.id === folder ? 'true' : undefined" :tabindex="node.folder.id === treeFocus ? 0 : -1"
-          :data-drop="dropOn === node.folder.id || undefined" :data-target="canDrop(node.folder.id) || undefined" :style="{ paddingInlineStart: 4 + (node.depth - 1) * 16 + 'px' }"
-          @click="openFolder(node.folder.id)" @focus="treeFocus = node.folder.id" @dragover="onDragOver($event, node.folder.id)" @dragenter="onDragOver($event, node.folder.id)" @dragleave="onDragLeave(node.folder.id)" @drop="onDrop($event, node.folder.id)">
+          :data-drop="dropOn === node.folder.id || undefined" :data-refused="(active && !canDrop(node.folder.id)) || undefined" :style="{ paddingInlineStart: 4 + (node.depth - 1) * 16 + 'px' }"
+          @click="openFolder(node.folder.id)" @focus="treeFocus = node.folder.id" @contextmenu="onFolderMenu($event, node.folder.id)">
           <span class="oui-files-twisty" :data-branch="node.branch || undefined" aria-hidden="true" @click.stop="node.branch && toggle(node.folder.id)"><OuiIcon v-if="node.branch" :icon="node.open ? chevronDown : chevronRight" :size="14" /></span>
           <OuiIcon :icon="folderIcon" :size="15" /><span class="oui-truncate oui-files-foldername">{{ node.folder.name }}</span>
           <span v-if="node.folder.count != null" class="oui-meta oui-num">{{ node.folder.count }}</span>
         </div>
+        <div v-if="naming && naming.parent === node.folder.id" role="treeitem" class="oui-files-newfolder" :aria-level="node.depth + 1" :style="{ paddingInlineStart: 4 + node.depth * 16 + 'px' }">
+          <span class="oui-files-twisty" aria-hidden="true" /><OuiIcon :icon="folderIcon" :size="15" />
+          <span class="oui-files-newname"><input ref="nameInput" v-model="naming.name" class="p-inputtext p-inputtext-sm" data-files-newname :aria-label="labels.folderName ?? labels.newFolder ?? 'New folder'"
+            :aria-invalid="!!naming.error || undefined" :aria-describedby="naming.error ? 'oui-files-nameerror' : undefined" maxlength="300" @keydown="onNameKey" @input="naming.error = ''" @blur="cancelNew">
+            <span v-if="naming.error" id="oui-files-nameerror" class="oui-files-nameerror" role="alert">{{ naming.error }}</span></span>
+        </div></template>
       </div>
       <div v-if="$slots.rail" class="oui-files-railfoot"><slot name="rail" /></div>
     </nav>
@@ -217,7 +326,9 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
           <li v-for="(f, i) in path" :key="f.id"><OuiIcon v-if="i" :icon="chevronRight" :size="12" class="oui-muted" />
             <button v-if="i < path.length - 1" type="button" class="oui-files-crumb" @click="openFolder(f.id)">{{ f.name }}</button><strong v-else aria-current="page">{{ f.name }}</strong></li>
         </ol>
-        <div v-if="hasTree && $slots.folder" class="oui-files-folderactions"><slot name="folder" :folder="byId.get(folder)" /></div>
+        <div v-if="hasTree && ($slots.folder || canCreate(folder))" class="oui-files-folderactions"><slot name="folder" :folder="byId.get(folder)" />
+          <Button v-if="canCreate(folder)" :label="labels.newFolder ?? 'New folder'" severity="secondary" text size="small" :disabled="createOff" :aria-describedby="describedby" data-files-mkdir @click="startNew(folder)">
+            <template #icon><OuiIcon :icon="folderPlus" :size="14" /></template></Button></div>
         <div v-if="$slots.toolbar" class="oui-files-tools"><slot name="toolbar" /></div>
       </div>
       <!-- Always there, so selecting does not move the table: the count, and what can be done with the selection. -->
@@ -244,8 +355,8 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
           </tr></thead>
           <tbody v-if="loading"><tr v-for="n in 6" :key="n" class="oui-files-skeleton"><td /><td><span class="oui-skeleton" :style="{ width: 40 + (n * 37) % 45 + '%' }" /></td><td><span class="oui-skeleton" /></td><td><span class="oui-skeleton" /></td></tr></tbody>
           <tbody v-else>
-            <tr v-for="f in rows" :key="f.id" class="oui-files-row" :data-file="f.id" :aria-selected="picked.has(f.id)" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1" :draggable="canMove && !locked"
-              :data-dragged="dragging.includes(f.id) || undefined" @click="onRowClick($event, f.id)" @dblclick="emit('open', f.id)" @focus="rowFocus = f.id" @dragstart="onDragStart($event, f.id)" @dragend="onDragEnd">
+            <tr v-for="f in rows" :key="f.id" class="oui-files-row" :data-file="f.id" :aria-selected="picked.has(f.id)" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1"
+              :data-dragged="dragging.includes(f.id) || undefined" @click="onRowClick($event, f.id)" @dblclick="emit('open', f.id)" @focus="rowFocus = f.id" @pointerdown="onRowPointerDown($event, f.id)" @dragstart.prevent>
               <td class="oui-files-check" @click.stop><input type="checkbox" tabindex="-1" :checked="picked.has(f.id)" :aria-label="labels.select(f.name)" @click="onCheck($event, f.id)"></td>
               <td><div class="oui-files-name"><OuiThumb :src="f.thumb" :size="32" :icon="fileIcon" /><span class="oui-truncate" :title="f.name">{{ f.name }}</span><span v-if="f.kind" class="oui-chip">{{ f.kind }}</span></div></td>
               <td class="oui-num">{{ f.sizeText ?? '—' }}</td><td class="oui-num oui-muted">{{ f.modifiedText ?? '—' }}</td>
@@ -272,8 +383,10 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
       </template>
       <OuiEmpty v-else :icon="fileIcon" :title="labels.nothingSelected" :text="labels.nothingSelectedText" />
     </aside>
-    <span ref="ghost" class="oui-files-ghost" aria-hidden="true" />
   </div>
+  <div v-if="dragging.length" ref="ghost" class="oui-files-ghost" aria-hidden="true"><OuiThumb :src="ghostFile?.thumb" :size="32" :icon="fileIcon" />
+    <span class="oui-truncate">{{ ghostFile?.name }}</span><span v-if="dragging.length > 1" class="oui-files-ghostcount oui-num">{{ dragging.length }}</span></div>
+  <ContextMenu v-if="creatable" ref="menu" :model="menuItems" />
   <OuiConfirm :visible="confirming.length > 0" :title="labels.removeTitle(confirming.length)" :confirm-label="labels.remove" :cancel-label="labels.cancel" danger
     @update:visible="(v: boolean) => { if (!v) confirming = []; }" @confirm="confirmDelete" @closed="holdFocus">
     <p>{{ labels.removeText }}</p>
@@ -295,12 +408,19 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
 .oui-files-folder:hover { background: var(--oui-control); }
 .oui-files-folder[aria-selected='true'] { font-weight: 650; background: var(--oui-control); box-shadow: inset 2px 0 0 var(--oui-primary-mark); }
 .orca-ui .oui-files-folder:focus-visible { outline-offset: -2px; }
-/* While files are dragged, folders that can take them are outlined; the one under the pointer is filled. */
-.oui-files-grid[data-dragging] .oui-files-folder[data-target] { box-shadow: inset 0 0 0 1px var(--oui-control-border); }
+/* While files are dragged, folders that cannot take them are dimmed; only the one under the pointer is marked. */
+.oui-files-grid[data-dragging] .oui-files-folder[data-refused] { opacity: .45; background: none; }
 .oui-files-grid[data-dragging] .oui-files-folder[data-drop] { background: var(--oui-primary-soft); box-shadow: inset 0 0 0 2px var(--oui-primary-mark); }
+html[data-oui-drag], html[data-oui-drag] * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+html[data-oui-drag='refused'], html[data-oui-drag='refused'] * { cursor: not-allowed !important; }
 .oui-files-twisty { flex: none; display: grid; place-items: center; width: 18px; height: 22px; color: var(--oui-muted); border-radius: var(--oui-radius-sm); }
 .oui-files-twisty[data-branch]:hover { color: var(--oui-text); background: var(--oui-control-hover); }
 .oui-files-foldername { flex: 1 1 0; }
+.oui-files-newfolder { display: flex; align-items: flex-start; gap: 6px; padding-block: 3px; padding-inline-end: var(--oui-s2); }
+.oui-files-newfolder > .oui-icon, .oui-files-newfolder > svg { margin-top: 6px; }
+.oui-files-newname { flex: 1 1 0; display: grid; gap: 2px; min-width: 0; }
+.oui-files-newname > input { width: 100%; min-width: 0; }
+.oui-files-nameerror { font-size: var(--oui-text-xs); color: var(--oui-danger); }
 .oui-files-railfoot { padding: var(--oui-s3); border-top: 1px solid var(--oui-border); }
 .oui-files-list { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* Only the rows give way when the list is short: the toolbar, the bar and the foot keep their height (a wrapped toolbar was cut). */
@@ -329,7 +449,8 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
 .oui-files-table td { height: 44px; padding: 0 var(--oui-s3); border-bottom: 1px solid var(--oui-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oui-files-table :is(th, td).oui-files-check { width: 36px; padding: 0 0 0 var(--oui-s3); overflow: visible; }
 .oui-files-check > input { display: block; width: 16px; height: 16px; margin: 0; cursor: pointer; }
-.oui-files-row { cursor: default; user-select: none; -webkit-user-select: none; }
+.oui-files-row { cursor: default; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+.oui-files-row img { -webkit-user-drag: none; }
 .oui-files-row:hover { background: var(--oui-raised); }
 .oui-files-row[aria-selected='true'] { background: var(--oui-primary-soft); }
 .oui-files-row[data-dragged] { opacity: .5; }
@@ -346,7 +467,12 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
 .orca-ui .oui-files-detailname { min-width: 0; font-size: var(--oui-text-lg); font-weight: 700; overflow-wrap: anywhere; }
 .oui-files-detailactions { display: flex; flex-wrap: wrap; gap: var(--oui-s2); padding-top: var(--oui-s1); }
 .oui-files-names { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.oui-files-ghost { position: absolute; top: -200px; left: 0; padding: 4px 10px; border-radius: var(--oui-radius); font-weight: 650; color: var(--oui-on-primary); background: var(--oui-primary); }
+/* The dragged file under the pointer, as the system draws a file being dragged: its picture and name, and a count for more. */
+.oui-files-ghost { position: fixed; top: 0; left: 0; z-index: 1000; display: flex; align-items: center; gap: var(--oui-s2); max-width: 280px; padding: 4px 10px 4px 4px;
+  pointer-events: none; opacity: .88; font-weight: 600; color: var(--oui-text); background: var(--oui-raised); border-radius: var(--oui-radius);
+  box-shadow: inset 0 0 0 1px var(--oui-border), var(--oui-shadow-overlay); will-change: transform; }
+.oui-files-ghostcount { position: absolute; top: -7px; left: 26px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: var(--oui-text-xs); font-weight: 700;
+  line-height: 18px; text-align: center; color: var(--oui-on-primary); background: var(--oui-primary); }
 /* Narrower: the detail goes under the list; narrower still, the folders go above it. */
 /* Stacked, the detail (and the tree, narrower still) get a share of the height at most and scroll inside it: the table
    keeps the rest. Sized to their content they took the height first, and a tall detail left the table none. */
