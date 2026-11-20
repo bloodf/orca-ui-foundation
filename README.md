@@ -1,4 +1,4 @@
-# Orca UI foundation 5.1.1 — Vue and PrimeVue
+# Orca UI foundation 5.2.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.1.1" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.2.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,15 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.2.0 makes `OuiFileBrowser` work like a desktop file manager. It is additive: nothing is removed, and a page that passes none of the new props behaves as in 5.1.1, apart from the fixes.
+
+- Naming in place, as in Finder. "New folder" (now a real button beside the path) adds the folder at the top of the list with its name selected; "New folder" on a folder's context menu adds it under that folder in the tree. Rename (context menu or F2) opens the name of a file (the name without its extension is selected) or a folder. Enter or a click elsewhere in the page commits, Escape cancels. A refused name (checked here, or rejected by the storage) is shown under the field, which stays open. Losing focus to another window commits nothing. 5.1 dropped the field on any blur, so in OrcaSlicer it could vanish before anything was typed; and with the button in the list, its field was found only in the tree.
+- Context menus, by right-click or the keyboard's menu key, on files in the list or grid and on folders in the tree. A file in the selection acts for the whole selection. The menu holds the page's own items (`fileMenu`, `folderMenu`), then Rename, "Move to…" (a question with the folders it can go to) and Delete; on a folder, also New folder. Deleting a folder asks first and warns that what is in it goes too. Arrow keys move through the menu and Escape closes it.
+- Grid view: a switch at the end of the bar shows the files as cards (picture, name, size) with the same selection, drag, menus and rename. Up and Down move a line of cards. The choice is kept in the browser's storage, per page and `viewKey`.
+- Fuzzy search helpers, `fuzzyMatch(query, name)` and `fuzzyFilter(items, query, nameOf)`: case, accents and separators (`_ - .` and space) do not matter, the letters only have to be in order, and the results come best first (exact, prefix, word start, contiguous, then with gaps). Give the result's hits to `OuiFile.match` to mark the matched letters, and set `ranked` so the column sort does not reorder the results. `scripts/fuzzy.test.mjs` runs in `npm run check`.
+- Backend: `rename`, `moveFolder` and `removeFolder` on `OuiFileBackend` give the browser `renamable`, `foldersMovable` and `foldersRemovable`. `useFileBackend` passes `act`, so the name field shows a storage's refusal. The open folder follows a folder that is renamed or moved, and goes up when its folder is deleted. Use `defineExpose` methods `newFolder`, `rename`, `moveFolder` and `deleteFolder` to wire a page's own buttons.
+- New labels: `rename`, `move`, `moveTitle`, `removeFolderTitle`, `removeFolderText`, `listView`, `gridView`. New types: `OuiFileOp`, `OuiFileMenuItem`, `OuiFileAction`. New icons: `grid`, `list`.
 
 Version 5.1.1 draws the folder context menu of `OuiFileBrowser` itself (one item, at the pointer, Escape or leaving it closes it) instead of PrimeVue's `ContextMenu`, which added 36 kB to every page that has the file browser; nothing else changes.
 

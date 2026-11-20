@@ -1,6 +1,6 @@
 {
   "name": "@orca-plugins/ui-foundation",
-  "version": "5.1.1",
+  "version": "5.2.0",
   "private": true,
   "type": "module",
   "description": "Shared Vue 3 and PrimeVue 5 visual foundation for Orca plugins",
@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build": "node scripts/icons.mjs && node scripts/vue-tsc.mjs --noEmit && vite build && node scripts/manifest.mjs",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs && node --test scripts/*.test.mjs"
   },
   "peerDependencies": {
     "@primeuix/themes": "3.1.1",

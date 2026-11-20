@@ -1,12 +1,12 @@
 import { computed, reactive, ref } from 'vue';
-import type { OuiFile, OuiFolder } from './OuiFileBrowser.vue';
+import type { OuiFile, OuiFileOp, OuiFolder } from './OuiFileBrowser.vue';
 
 /*
  * The storage behind OuiFileBrowser. Each printer plugin writes one of these over its own bridge (Moonraker's file
  * endpoints, the Kobra's file list) and gives it to useFileBackend(); everything else is shared, so the Files tab
  * behaves the same in every plugin. What the storage cannot do is left out, and the component stops offering it:
  * no `folders`: no tree, no path, no "Move to"; no `move`: the tree stays for browsing, "Move to" and dragging go;
- * no `createFolder`: no "New folder".
+ * no `createFolder`: no "New folder"; no `rename`, `moveFolder`, `removeFolder`: no such item in the context menus.
  * Every method rejects (throws) on failure; nothing here turns a failure into an empty list.
  */
 export interface OuiFileBackend {
@@ -20,13 +20,21 @@ export interface OuiFileBackend {
   move?(ids: string[], to: string, from: string): Promise<void>;
   /** Make the folder `name` in `parent`; resolves to the new folder's id, which is then opened. Omit it when the storage cannot make folders. */
   createFolder?(parent: string, name: string): Promise<string | void>;
+  /** Rename a file or folder in place; resolves to its new id. A rejection's message is shown under the name field. */
+  rename?(id: string, name: string, folder: boolean): Promise<string | void>;
+  /** Move the folder `id` into `to`; resolves to its new id. */
+  moveFolder?(id: string, to: string): Promise<string | void>;
+  /** Delete the folder `id` with everything in it. The user has already confirmed. */
+  removeFolder?(id: string): Promise<void>;
 }
+/** 'create' and 'rename' are typed in place: their failures are shown under the name field, not given to `onError`. */
+export type OuiFileAction = 'move' | 'delete' | 'create' | 'rename' | 'move-folder' | 'delete-folder';
 export interface OuiFileBackendOptions {
   /** The folder to open first (default: the first root). */ folder?: string;
   /** A move or delete failed: tell the user (a toast), in the page's language. The list is read again either way. */
-  onError(action: 'move' | 'delete' | 'create', error: unknown, ids: string[]): void;
-  /** A move, delete or new folder finished: news for a toast. For 'create', `ids` is the new folder's name and `to` its parent. */
-  onDone?(action: 'move' | 'delete' | 'create', ids: string[], to?: string): void;
+  onError(action: OuiFileAction, error: unknown, ids: string[]): void;
+  /** A change finished: news for a toast. For 'create', `ids` is the new folder's name and `to` its parent; for 'rename', `to` is the new name. */
+  onDone?(action: OuiFileAction, ids: string[], to?: string): void;
   /** The sentence shown when the files cannot be read (default: the error's own message). */ message?(error: unknown): string;
 }
 
@@ -68,7 +76,7 @@ export function useFileBackend(backend: OuiFileBackend, options: OuiFileBackendO
       files.value = []; error.value = say(e);
     } finally { if (mine === turn) loading.value = false; }
   }
-  async function act(action: 'move' | 'delete' | 'create', ids: string[], work: () => Promise<void>, to?: string) {
+  async function act(action: OuiFileAction, ids: string[], work: () => Promise<void>, to?: string) {
     if (busy.value) return;
     busy.value = true;
     try { await work(); options.onDone?.(action, ids, to); } catch (e) { options.onError(action, e, ids); }
@@ -76,16 +84,31 @@ export function useFileBackend(backend: OuiFileBackend, options: OuiFileBackendO
     finally { await reload({ quiet: true }); busy.value = false; }
   }
   const props = computed(() => ({ folders: folders.value, files: files.value, folder: folder.value, selected: selected.value, loading: loading.value, busy: busy.value,
-    error: error.value, movable: !!backend.move, creatable: !!backend.createFolder }));
+    error: error.value, movable: !!backend.move, creatable: !!backend.createFolder, renamable: !!backend.rename,
+    foldersMovable: !!backend.moveFolder, foldersRemovable: !!backend.removeFolder, act: typed }));
+  /** The open folder follows a folder that was renamed or moved (it, or one it is in), and goes up from one deleted. */
+  const inside = (id: string) => folder.value === id || folder.value.startsWith(id + '/');
+  // ponytail: "inside" reads ids as paths (a/b/c), as every storage here has them; give the backend a parent lookup if one does not.
+  function follow(was: string, now: string | void) { if (now && inside(was)) { folder.value = now + folder.value.slice(was.length); selected.value = []; } }
+  /** A new folder or a rename, typed in the browser: a rejection goes straight back to the name field (nothing changed, so
+   *  nothing is read again); once done, the list is read again before the field closes. */
+  async function typed(op: OuiFileOp): Promise<void> {
+    if (busy.value) throw new Error('busy');
+    busy.value = true;
+    try {
+      if (op.kind === 'create') { const id = await backend.createFolder!(op.parent, op.name); if (id) { folder.value = id; selected.value = []; } options.onDone?.('create', [op.name], op.parent); }
+      else { const id = await backend.rename!(op.id, op.name, op.folder); if (op.folder) follow(op.id, id); else if (id) selected.value = [id]; options.onDone?.('rename', [op.id], op.name); }
+    } catch (e) { busy.value = false; throw e; }
+    try { await reload({ quiet: true }); } finally { busy.value = false; }
+  }
   const on = {
     'update:folder': (id: string) => { folder.value = id; selected.value = []; void reload({ filesOnly: true }); },
     'update:selected': (ids: string[]) => { selected.value = ids; },
     move: ({ ids, to }: { ids: string[]; to: string }) => { const from = folder.value; void act('move', ids, () => backend.move!(ids, to, from), to); },
     delete: (ids: string[]) => { const from = folder.value; void act('delete', ids, () => backend.remove(ids, from)); },
     retry: () => { void reload(); },
-    // The new folder is opened: the read after it brings the tree with it, and an id the tree does not have falls back to a root.
-    'create-folder': ({ parent, name }: { parent: string; name: string }) => { void act('create', [name], async () => {
-      const id = await backend.createFolder!(parent, name); if (id) { folder.value = id; selected.value = []; } }, parent); },
+    'move-folder': ({ id, to }: { id: string; to: string }) => { void act('move-folder', [id], async () => follow(id, await backend.moveFolder!(id, to)), to); },
+    'delete-folder': (id: string) => { void act('delete-folder', [id], async () => { await backend.removeFolder!(id); if (inside(id)) { folder.value = folders.value.find(f => f.id === id)?.parent ?? ''; selected.value = []; } }); },
   };
   void reload();
   return reactive({ props, on, reload, folders, files, folder, selected, loading, busy, error });
