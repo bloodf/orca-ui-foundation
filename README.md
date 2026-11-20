@@ -1,4 +1,4 @@
-# Orca UI foundation 5.1.0 — Vue and PrimeVue
+# Orca UI foundation 5.1.1 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.1.0" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.1.1" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,8 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.1.1 draws the folder context menu of `OuiFileBrowser` itself (one item, at the pointer, Escape or leaving it closes it) instead of PrimeVue's `ContextMenu`, which added 36 kB to every page that has the file browser; nothing else changes.
 
 Version 5.1.0 makes dragging files onto a folder work inside OrcaSlicer and lets `OuiFileBrowser` make folders. It is additive: no prop, slot or event is removed or changed.
 

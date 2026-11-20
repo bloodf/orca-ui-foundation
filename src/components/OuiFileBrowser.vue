@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onBeforeUpdate, onUpdated, ref, watch } from 'vue';
 import Button from 'primevue/button';
-import ContextMenu from 'primevue/contextmenu';
 import Select from 'primevue/select';
 import OuiConfirm from './OuiConfirm.vue';
 import OuiEmpty from './OuiEmpty.vue';
@@ -251,8 +250,9 @@ const FOLDER_ERRORS: Record<OuiFolderNameError, string> = { empty: 'Type a name.
   long: 'A name has at most 255 characters.', taken: 'This folder already has one with that name.' };
 const naming = ref<{ parent: string; name: string; error: string } | null>(null);
 const nameInput = ref<HTMLInputElement[]>([]);
-const menu = ref<InstanceType<typeof ContextMenu>>();
-const menuFolder = ref('');
+// The folder's context menu: one item, at the pointer. Its own few lines rather than PrimeVue's ContextMenu (36 kB in a page).
+const menu = ref<{ id: string; x: number; y: number } | null>(null);
+const menuEl = ref<HTMLElement>();
 const canCreate = (id: string) => props.creatable && hasTree.value && !!byId.value.get(id) && !byId.value.get(id)?.readonly;
 const createOff = computed(() => props.readonly || props.busy);
 const siblings = (parent: string) => new Set((children.value.get(parent) ?? []).map(f => f.name.toLowerCase()));
@@ -281,8 +281,15 @@ function onNameKey(event: KeyboardEvent) {
   event.stopPropagation();   // the tree's own keys (arrows, Space, Enter) are not for the field
   if (event.key === 'Enter') { event.preventDefault(); commitNew(); } else if (event.key === 'Escape') { event.preventDefault(); cancelNew(); }
 }
-const menuItems = computed(() => [{ label: props.labels.newFolder ?? 'New folder', disabled: !canCreate(menuFolder.value) || createOff.value, command: () => startNew(menuFolder.value) }]);
-function onFolderMenu(event: MouseEvent, id: string) { if (!props.creatable) return; menuFolder.value = id; menu.value?.show(event); }
+function onFolderMenu(event: MouseEvent, id: string) {
+  if (!props.creatable) return;
+  event.preventDefault(); menu.value = { id, x: event.clientX, y: event.clientY };
+  // Fixed, from wherever this component's containing block puts (0, 0).
+  nextTick(() => { const el = menuEl.value; if (!el) return; el.style.transform = 'none'; const r = el.getBoundingClientRect();
+    el.style.transform = `translate(${menu.value!.x - r.left}px, ${menu.value!.y - r.top}px)`; el.querySelector<HTMLElement>('button')?.focus(); });
+}
+function closeMenu(refocus = false) { const id = menu.value?.id; menu.value = null; if (refocus && id) focusFolder(id); }
+function onMenuPick() { const id = menu.value?.id; menu.value = null; if (id) startNew(id); }
 
 const one = computed(() => (pickedRows.value.length === 1 ? pickedRows.value[0] : null));
 
@@ -386,7 +393,8 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
   </div>
   <div v-if="dragging.length" ref="ghost" class="oui-files-ghost" aria-hidden="true"><OuiThumb :src="ghostFile?.thumb" :size="32" :icon="fileIcon" />
     <span class="oui-truncate">{{ ghostFile?.name }}</span><span v-if="dragging.length > 1" class="oui-files-ghostcount oui-num">{{ dragging.length }}</span></div>
-  <ContextMenu v-if="creatable" ref="menu" :model="menuItems" />
+  <div v-if="menu" ref="menuEl" class="oui-files-menu" role="menu" @keydown.esc.prevent="closeMenu(true)" @focusout="closeMenu()">
+    <button type="button" role="menuitem" class="oui-files-menuitem" :disabled="!canCreate(menu.id) || createOff" @mousedown.prevent @click="onMenuPick"><OuiIcon :icon="folderPlus" :size="14" />{{ labels.newFolder ?? 'New folder' }}</button></div>
   <OuiConfirm :visible="confirming.length > 0" :title="labels.removeTitle(confirming.length)" :confirm-label="labels.remove" :cancel-label="labels.cancel" danger
     @update:visible="(v: boolean) => { if (!v) confirming = []; }" @confirm="confirmDelete" @closed="holdFocus">
     <p>{{ labels.removeText }}</p>
@@ -421,6 +429,11 @@ html[data-oui-drag='refused'], html[data-oui-drag='refused'] * { cursor: not-all
 .oui-files-newname { flex: 1 1 0; display: grid; gap: 2px; min-width: 0; }
 .oui-files-newname > input { width: 100%; min-width: 0; }
 .oui-files-nameerror { font-size: var(--oui-text-xs); color: var(--oui-danger); }
+.oui-files-menu { position: fixed; top: 0; left: 0; z-index: 1000; min-width: 160px; padding: 4px; border-radius: var(--oui-radius); background: var(--oui-raised);
+  box-shadow: inset 0 0 0 1px var(--oui-border), var(--oui-shadow-overlay); }
+.oui-files-menuitem { display: flex; align-items: center; gap: var(--oui-s2); width: 100%; padding: 6px 8px; border: 0; border-radius: var(--oui-radius-sm); color: var(--oui-text); background: none; cursor: pointer; text-align: start; }
+.oui-files-menuitem:hover, .oui-files-menuitem:focus-visible { background: var(--oui-control); }
+.oui-files-menuitem:disabled { opacity: .45; cursor: not-allowed; }
 .oui-files-railfoot { padding: var(--oui-s3); border-top: 1px solid var(--oui-border); }
 .oui-files-list { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* Only the rows give way when the list is short: the toolbar, the bar and the foot keep their height (a wrapped toolbar was cut). */
