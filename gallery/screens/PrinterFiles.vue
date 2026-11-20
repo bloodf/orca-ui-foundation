@@ -8,7 +8,7 @@ import { param, t } from '../i18n';
 import PrinterBar from '../v5/PrinterBar.vue';
 import { FILES, FOLDERS } from '../v5/data';
 // MOCK — the Files tab of both printer plugins: one OuiFileBrowser over a backend adapter (useFileBackend).
-// ?screen=u1-files: a storage with folders that can move files (the tree, "Move to", drag onto a folder).
+// ?screen=u1-files: a storage with folders that can move files and make folders (the tree, "Move to", drag onto a folder, "New folder").
 // ?screen=kobra-files: a storage with no folders (no tree, no move; multi-select and delete as with folders).
 // state: '' (one file selected) | 'multi' (three selected: the bulk bar) | 'loading' | 'empty' | 'error' | 'slow' (a move or delete takes half a second, as on a real printer).
 const props = defineProps<{ state: string }>();
@@ -21,19 +21,21 @@ const n = (count: number, one: string, many: string) => `${count} ${count === 1 
 const open = flat ? '' : 'local/chroma';
 const store: Record<string, OuiFile[]> = { [open]: props.state === 'empty' ? [] : [...FILES], camera: FILES.slice(0, 3).map(f => ({ ...f, id: 'cam-' + f.id, name: f.name.replace(/\.\w+$/, '.mp4'), kind: 'MP4' })), 'local/gifts': FILES.slice(4, 6).map(f => ({ ...f, id: 'gift-' + f.id, name: 'gift_' + f.name })) };
 const slow = () => (props.state === 'slow' ? new Promise<void>(r => setTimeout(r, 500)) : Promise.resolve());
+const tree = FOLDERS.map(f => ({ ...f }));
 const backend: OuiFileBackend = {
   ...(flat ? {} : {
-    folders: async () => FOLDERS.map(f => ({ ...f, count: f.id in store ? store[f.id].length : f.count })),
+    folders: async () => tree.map(f => ({ ...f, count: f.id in store ? store[f.id].length : f.count })),
     move: async (ids: string[], to: string, from: string) => { await slow(); store[to] = [...(store[to] ?? []), ...store[from].filter(f => ids.includes(f.id))]; store[from] = store[from].filter(f => !ids.includes(f.id)); },
+    createFolder: async (parent: string, name: string) => { await slow(); const id = `${parent}/${name}`; tree.push({ id, name, parent, count: 0 }); store[id] = []; return id; },
   }),
   list: folder => (props.state === 'loading' ? new Promise<OuiFile[]>(() => {})
     : props.state === 'error' ? Promise.reject(new Error(t('The printer did not answer in 10 s.', 'A impressora não respondeu em 10 s.'))) : Promise.resolve([...(store[folder] ?? [])])),
   remove: async (ids, folder) => { await slow(); store[folder] = store[folder].filter(f => !ids.includes(f.id)); },
 };
 const files = useFileBackend(backend, { folder: open,
-  onDone: (action, ids, to) => toast.show({ tone: 'success', title: action === 'move'
-    ? t(`Moved ${ids.length} to ${FOLDERS.find(f => f.id === to)?.name}.`, `${ids.length} movidos para ${FOLDERS.find(f => f.id === to)?.name}.`) : t(`Deleted ${ids.length}.`, `${ids.length} excluídos.`) }),
-  onError: (action, error) => toast.show({ tone: 'error', title: action === 'move' ? t('The files were not moved.', 'Os arquivos não foram movidos.') : t('The files were not deleted.', 'Os arquivos não foram excluídos.'),
+  onDone: (action, ids, to) => toast.show({ tone: 'success', title: action === 'create' ? t(`Folder ${ids[0]} made.`, `Pasta ${ids[0]} criada.`) : action === 'move'
+    ? t(`Moved ${ids.length} to ${tree.find(f => f.id === to)?.name}.`, `${ids.length} movidos para ${tree.find(f => f.id === to)?.name}.`) : t(`Deleted ${ids.length}.`, `${ids.length} excluídos.`) }),
+  onError: (action, error) => toast.show({ tone: 'error', title: action === 'create' ? t('The folder was not made.', 'A pasta não foi criada.') : action === 'move' ? t('The files were not moved.', 'Os arquivos não foram movidos.') : t('The files were not deleted.', 'Os arquivos não foram excluídos.'),
     body: error instanceof Error ? error.message : String(error) }) });
 // The reference shots open with a selection.
 watch(() => files.files, list => { if (list.length) files.selected = props.state === 'multi' ? list.slice(1, 4).map(f => f.id) : props.state ? [] : [list[0].id]; }, { once: true });
@@ -48,6 +50,10 @@ const labels: OuiFileBrowserLabels = {
   empty: flat ? t('No files on the printer', 'Nenhum arquivo na impressora') : t('This folder is empty', 'Esta pasta está vazia'), emptyText: t('Send a print from OrcaSlicer, or upload a file.', 'Envie uma impressão do OrcaSlicer ou um arquivo.'), loading: t('Reading the files', 'Lendo os arquivos'),
   nothingSelected: t('No file selected', 'Nenhum arquivo selecionado'), nothingSelectedText: t('Select a file to see its details and print it.', 'Selecione um arquivo para ver os detalhes e imprimir.'),
   loadFailed: t('The files could not be read', 'Não foi possível ler os arquivos'), retry: t('Try again', 'Tentar de novo'),
+  newFolder: t('New folder', 'Nova pasta'), folderName: t('Folder name', 'Nome da pasta'),
+  folderError: reason => ({ empty: t('Type a name.', 'Digite um nome.'), invalid: t('A name can’t contain / or be . or ..', 'Um nome não pode ter / nem ser . ou ..'),
+    spaces: t('A name can’t start or end with a space.', 'Um nome não pode começar nem terminar com espaço.'), long: t('A name has at most 255 characters.', 'Um nome tem no máximo 255 caracteres.'),
+    taken: t('This folder already has one with that name.', 'Esta pasta já tem uma com esse nome.') })[reason],
 };
 </script>
 <template>
@@ -67,7 +73,6 @@ const labels: OuiFileBrowserLabels = {
       <template #folder="{ folder }">
         <Button severity="secondary" text size="small" :disabled="!folder || folder.readonly || !folder.parent" :aria-label="t('Rename folder', 'Renomear pasta')" :title="t('Rename folder', 'Renomear pasta')"><template #icon><OuiIcon :icon="I.edit" :size="14" /></template></Button>
         <Button severity="secondary" text size="small" :disabled="!folder || folder.readonly || !folder.parent" :aria-label="t('Delete folder', 'Excluir pasta')" :title="t('Delete folder', 'Excluir pasta')"><template #icon><OuiIcon :icon="I.trash" :size="14" /></template></Button>
-        <Button :label="t('New folder', 'Nova pasta')" severity="secondary" text size="small" :disabled="!folder || folder.readonly"><template #icon><OuiIcon :icon="I.plus" :size="14" /></template></Button>
       </template>
       <template #rail><div class="pf-space"><span class="oui-meta oui-num">{{ t('5.2 of 8 GB used', '5,2 de 8 GB usados') }}</span><OuiLevel :fraction="0.35" :label="t('Free space', 'Espaço livre')" /></div></template>
       <template #actions>

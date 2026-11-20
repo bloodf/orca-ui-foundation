@@ -1,4 +1,4 @@
-# Orca UI foundation 5.0.8 — Vue and PrimeVue
+# Orca UI foundation 5.1.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.0.8" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.1.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,12 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.1.0 makes dragging files onto a folder work inside OrcaSlicer and lets `OuiFileBrowser` make folders. It is additive: no prop, slot or event is removed or changed.
+
+- `OuiFileBrowser` drags with pointer events instead of HTML5 drag and drop. OrcaSlicer on macOS replaces WKWebView's drop handling for the whole app (`src/slic3r/Utils/MacDarkMode.mm`, category `WKWebView (DragDrop)`: `draggingEntered:`, `draggingUpdated:` and `performDragOperation:` are swapped for versions that never reach WebKit), so a page never got `dragover` or `drop` and a drop did nothing. Pointer events reach the page in WKWebView, WebView2 and WebKitGTK.
+- While dragging, the file (its picture and name, and a count when several are dragged) follows the pointer; folders that cannot take the files are dimmed with a not-allowed cursor, and only the folder under the pointer is marked. A release on another place, or Escape, sends the file back to its row (at once with reduced motion). Rows no longer carry `draggable`; a storage without folders, or that cannot move, has no drag at all.
+- New folder: a backend with `createFolder(parent, name)` (resolving to the new folder's id) gives the browser `creatable`, which offers "New folder" beside the path (in the open folder) and on a folder's context menu in the tree (in that folder). The name is typed in the tree, starting from `labels.newFolder` with a number added if a sibling has it; Enter makes it, Escape or leaving the field drops it. The browser refuses an empty name, '/', '.', '..', spaces at either end, more than 255 characters and a sibling's name (any case), saying why under the field (`labels.folderError(reason)`, English by default), and emits `create-folder` with `{ parent, name }`. `useFileBackend` runs it like a move (one at a time, the list read again after) and opens the new folder. New optional labels: `newFolder`, `folderName`, `folderError`; new type `OuiFolderNameError`; new icon `folderPlus`. `onError` and `onDone` can now be called with `'create'`.
 
 Version 5.0.8 updates dependencies only; no source, style or API changes:
 

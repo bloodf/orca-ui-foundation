@@ -5,7 +5,8 @@ import type { OuiFile, OuiFolder } from './OuiFileBrowser.vue';
  * The storage behind OuiFileBrowser. Each printer plugin writes one of these over its own bridge (Moonraker's file
  * endpoints, the Kobra's file list) and gives it to useFileBackend(); everything else is shared, so the Files tab
  * behaves the same in every plugin. What the storage cannot do is left out, and the component stops offering it:
- * no `folders`: no tree, no path, no "Move to"; no `move`: the tree stays for browsing, "Move to" and dragging go.
+ * no `folders`: no tree, no path, no "Move to"; no `move`: the tree stays for browsing, "Move to" and dragging go;
+ * no `createFolder`: no "New folder".
  * Every method rejects (throws) on failure; nothing here turns a failure into an empty list.
  */
 export interface OuiFileBackend {
@@ -17,12 +18,15 @@ export interface OuiFileBackend {
   remove(ids: string[], folder: string): Promise<void>;
   /** Move these files from `from` to the folder `to`. Omit it when the storage cannot move files. */
   move?(ids: string[], to: string, from: string): Promise<void>;
+  /** Make the folder `name` in `parent`; resolves to the new folder's id, which is then opened. Omit it when the storage cannot make folders. */
+  createFolder?(parent: string, name: string): Promise<string | void>;
 }
 export interface OuiFileBackendOptions {
   /** The folder to open first (default: the first root). */ folder?: string;
   /** A move or delete failed: tell the user (a toast), in the page's language. The list is read again either way. */
-  onError(action: 'move' | 'delete', error: unknown, ids: string[]): void;
-  /** A move or delete finished: news for a toast. */ onDone?(action: 'move' | 'delete', ids: string[], to?: string): void;
+  onError(action: 'move' | 'delete' | 'create', error: unknown, ids: string[]): void;
+  /** A move, delete or new folder finished: news for a toast. For 'create', `ids` is the new folder's name and `to` its parent. */
+  onDone?(action: 'move' | 'delete' | 'create', ids: string[], to?: string): void;
   /** The sentence shown when the files cannot be read (default: the error's own message). */ message?(error: unknown): string;
 }
 
@@ -64,7 +68,7 @@ export function useFileBackend(backend: OuiFileBackend, options: OuiFileBackendO
       files.value = []; error.value = say(e);
     } finally { if (mine === turn) loading.value = false; }
   }
-  async function act(action: 'move' | 'delete', ids: string[], work: () => Promise<void>, to?: string) {
+  async function act(action: 'move' | 'delete' | 'create', ids: string[], work: () => Promise<void>, to?: string) {
     if (busy.value) return;
     busy.value = true;
     try { await work(); options.onDone?.(action, ids, to); } catch (e) { options.onError(action, e, ids); }
@@ -72,13 +76,16 @@ export function useFileBackend(backend: OuiFileBackend, options: OuiFileBackendO
     finally { await reload({ quiet: true }); busy.value = false; }
   }
   const props = computed(() => ({ folders: folders.value, files: files.value, folder: folder.value, selected: selected.value, loading: loading.value, busy: busy.value,
-    error: error.value, movable: !!backend.move }));
+    error: error.value, movable: !!backend.move, creatable: !!backend.createFolder }));
   const on = {
     'update:folder': (id: string) => { folder.value = id; selected.value = []; void reload({ filesOnly: true }); },
     'update:selected': (ids: string[]) => { selected.value = ids; },
     move: ({ ids, to }: { ids: string[]; to: string }) => { const from = folder.value; void act('move', ids, () => backend.move!(ids, to, from), to); },
     delete: (ids: string[]) => { const from = folder.value; void act('delete', ids, () => backend.remove(ids, from)); },
     retry: () => { void reload(); },
+    // The new folder is opened: the read after it brings the tree with it, and an id the tree does not have falls back to a root.
+    'create-folder': ({ parent, name }: { parent: string; name: string }) => { void act('create', [name], async () => {
+      const id = await backend.createFolder!(parent, name); if (id) { folder.value = id; selected.value = []; } }, parent); },
   };
   void reload();
   return reactive({ props, on, reload, folders, files, folder, selected, loading, busy, error });
