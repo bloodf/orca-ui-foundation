@@ -344,7 +344,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         if (got !== '1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,not-a-target,3,1,no-delete,fixed,no-move,not-asked') bad.push('file browser interactions: ' + got);
       }
       if (screen === 'u1-files' && !state && width >= 1200 && lang === 'en') {
-        // 5.1.0: "New folder" beside the path makes one in the open folder, typed in the tree: a name that is refused says why
+        // 5.2.0: "New folder" beside the path makes one in the open folder, named at the top of the list: a name that is refused says why
         // and stays; Enter makes it and opens it; a folder's context menu makes one in that folder; Escape leaves.
         const got = await evaluate(`(async () => {
           const tick = () => new Promise(r => setTimeout(r, 120)); const out = []; try {
@@ -354,7 +354,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           document.querySelector('[data-folder="local/chroma"]').click(); await tick(); await tick();
           document.querySelector('[data-files-mkdir]').click(); await tick();
           out.push(field() === document.activeElement ? 'field-focused' : 'NOT-FOCUSED'); out.push(field().value);
-          out.push(field().closest('[role=treeitem]').getAttribute('aria-level'));
+          out.push(field().closest('.oui-files-newrow') ? 'in-list' : 'NOT-IN-LIST');
           await typeName('a/b'); out.push(document.querySelector('.oui-files-nameerror')?.textContent.includes('/') ? 'slash-refused' : 'SLASH-OK');
           await typeName(' x'); out.push(field()?.getAttribute('aria-invalid') === 'true' ? 'spaces-refused' : 'SPACES-OK');
           const sibling = document.querySelector('[data-folder^="local/chroma/"] .oui-files-foldername')?.textContent;
@@ -368,7 +368,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           out.push(field()?.closest('[role=treeitem]')?.previousElementSibling?.dataset.folder ?? 'NO-FIELD'); out.push(field()?.value);
           await typeName(field().value, 'Escape'); out.push(field() ? 'STILL-OPEN' : 'left');
           } catch (e) { out.push('THREW ' + e.message); } return out.join(','); })()`);
-        if (got !== 'none-in-read-only,field-focused,New folder,3,slash-refused,spaces-refused,taken-refused,closed,local/chroma/Prints,menu,local/gifts,New folder,left') bad.push('file browser, new folder: ' + got);
+        if (got !== 'none-in-read-only,field-focused,New folder,in-list,slash-refused,spaces-refused,taken-refused,closed,local/chroma/Prints,menu,local/gifts,New folder,left') bad.push('file browser, new folder: ' + got);
       }
       if (screen === 'kobra-files' && !state && width >= 1200) {
         // The same component over a storage with no folders: no tree, no path, no "Move to", rows cannot be dragged;
