@@ -1,4 +1,4 @@
-# Orca UI foundation 5.3.0 — Vue and PrimeVue
+# Orca UI foundation 5.4.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.3.0" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.4.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,21 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.4.0 adds a dashboard the user arranges: `OuiDashboard`, its layout model and `OuiWidgetMaximize`. It is additive: nothing else changes, apart from `OuiCamera` taking its shape from two variables.
+
+- `OuiDashboard` lays a page's modules (widgets) on 12 columns and 32 px rows; every widget rises as far as it can, so there are no holes. The page gives `widgets` (id, title, icon, the module's component, its default, least and most size in columns and rows, and its settings), `defaults` (the default layout) and `labels`, and stores what `update:modelValue` emits in its own settings (not the browser's storage), handing it back as `v-model`. A widget with settings gets them as its `config` prop, defaults filled in.
+- **Edit layout** shows quiet grid dots and, on each widget, a frame: drag it to move the widget, drag an edge or a corner to resize it (snapped to the grid, within its least and most size), the gear for its settings, × to remove it. **Add widget** lists every widget; those on the layout are marked. Keyboard: arrow keys move a focused widget, Shift and arrow keys resize it, Delete removes it, and the new place is said. **Save layout** keeps the edit, **Cancel** drops it; Escape cancels a drag.
+- Layouts are named: new (from the current edit), switch (the select, kept with the dashboard), rename, delete (it asks; the last one stays) and **Reset to default** (kept by Save). At most 12, names unique in any case.
+- Dragging and resizing use pointer events, never HTML5 drag and drop, which OrcaSlicer swallows on macOS (see 5.1.0).
+- What is stored is checked before it is shown (`validateLayout`): anything that is not a dashboard gives the default; unknown widgets, a second copy, unknown settings and values out of range are dropped; sizes are brought within each widget's limits and overlaps resolved. `scripts/layout.test.mjs` (in `npm run check`) covers place, move, resize, gravity, add, remove and validation.
+- Each widget's module (an `OuiPanel`) fills its cell; its body scrolls inside and is a size container named `oui-widget`, so a widget can fit its content to its size with `@container oui-widget (...)`. An `OuiCamera` in a widget keeps its picture's shape and fits both ways.
+- Narrower than `narrowAt` (640 px), the dashboard is one column in reading order, each widget as tall as its content, and is not edited.
+- `OuiWidgetMaximize`, in a module's header actions, shows that widget alone, as tall as the window; Restore or Escape brings the grid back. Outside a dashboard it draws nothing.
+- `OuiCamera`: `--oui-camera-w` and `--oui-camera-h` (16 and 9 by default) set its box's shape.
+- New icons: `maximize`, `minimize`. New exports: `OuiDashboard`, `OuiWidgetMaximize`, `OUI_DASHBOARD_LABELS`, `validateLayout`, `COLS`, types `OuiWidget`, `OuiDashboardLabels`, `OuiDashboardState`, `OuiLayout`, `OuiLayoutItem`, `OuiWidgetSetting`, `OuiWidgetSize`, `OuiWidgetValue`.
+
+To use it, replace the page's fixed dashboard grid with `<OuiDashboard v-model="stored" :widgets :defaults :labels />`, keep the value in the plugin's settings, and give each module that is worth enlarging an `OuiWidgetMaximize`.
 
 Version 5.3.0 rounds out `OuiFileBrowser`'s context menus, lets folders be dragged, and fixes its icons and card names. It is additive: no prop, slot or event is removed.
 
