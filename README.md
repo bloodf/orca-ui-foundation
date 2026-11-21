@@ -1,4 +1,4 @@
-# Orca UI foundation 5.5.0 — Vue and PrimeVue
+# Orca UI foundation 5.6.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.5.0" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.6.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,16 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.6.0: dashboard rows grow to fit content, so a widget is never cut off and a layout has no holes at any window width.
+
+- A row is at least 32 px and grows when a widget's content needs more (a narrower window wraps more). The widgets beside it grow with the row, so both sides of a layout still end on the same row. A widget's `h` is now its least height in rows.
+- `fill: true` on a widget (a camera, a log, a remote screen) keeps the old behaviour: it fills whatever its rows give it and never makes them taller; its body is still a size container, so a camera keeps its picture's shape.
+- A content widget's body is an `inline-size` container named `oui-widget`: width queries work as before; height queries only match in a `fill` widget.
+- Dragging and resizing map the pointer to the rows as they are laid out.
+- A stored layout keeps its sizes: a least height that depends on the width (`rowsByWidth`) applies only when resizing.
+
+To update from 5.5.0: mark the filling widgets `fill: true`, give content widgets the height they need at a wide window (rows grow for narrower ones), and replace height container queries in content widgets with width ones.
 
 Version 5.5.0 lets a dashboard widget never clip, and lets a page change its default layout. It is additive.
 

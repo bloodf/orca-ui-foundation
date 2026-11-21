@@ -107,7 +107,7 @@ test('nameProblem refuses empty names and a name in use (any case), except the l
   assert.equal(nameProblem('Night', ls), '');
 });
 
-test('a least height by width: narrower needs more rows, and a resize or a stored size never goes under it', () => {
+test('a least height by width: narrower needs more rows when resizing; a stored size keeps its rows', () => {
   const byW = rowsByWidth({ 4: 8, 8: 5, 12: 3 });
   assert.deepEqual([3, 4, 7, 8, 11, 12].map(byW), [8, 8, 8, 5, 5, 3], 'below the first step its rows, between steps the narrower one');
   const job = { id: 'job', w: 12, h: 3, minW: 4, minH: byW };
@@ -117,7 +117,7 @@ test('a least height by width: narrower needs more rows, and a resize or a store
   const items = [{ id: 'job', x: 0, y: 0, w: 12, h: 3 }, { id: 'log', x: 0, y: 3, w: 8, h: 6 }];
   assert.deepEqual(at(resize(items, 'job', 8, 3, sizeOf2), 'job'), [0, 0, 8, 5], 'narrower: taller');
   assert.deepEqual(at(resize(items, 'job', 12, 1, sizeOf2), 'job'), [0, 0, 12, 3], 'full width: its own least');
-  assert.deepEqual(cleanItems([{ id: 'job', x: 0, y: 0, w: 4, h: 3 }], [job])[0].h, 8, 'a stored size under it grows');
+  assert.deepEqual(cleanItems([{ id: 'job', x: 0, y: 0, w: 4, h: 3 }], [job])[0].h, 3, 'a stored size keeps its rows (only resizing applies it)');
 });
 
 test('a layout still exactly as an earlier default gets the new default; arranged layouts and broken data stay as they are', () => {
