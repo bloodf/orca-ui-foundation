@@ -161,6 +161,7 @@ function onMove(event: PointerEvent) {
   // Measured against the grid, not the window: the page may scroll while the pointer is down.
   const dx = event.clientX - op.x, dy = event.clientY - op.y + op.top - (grid.value?.getBoundingClientRect().top ?? op.top);
   if (!dragged.value) {
+    if (!(event.buttons & 1)) { end(); return; } // released where no pointerup reached us, before the drag began
     if (Math.hypot(dx, dy) < SLOP) return;
     dragged.value = op.id;
     try { op.el.setPointerCapture(op.pointer); } catch { /* gone already: the up that follows ends it */ }

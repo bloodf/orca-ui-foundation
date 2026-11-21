@@ -46,9 +46,11 @@ async function show() {
   position();
 }
 function hide() { open.value = false; }
+// The pointer leaving does not hide a hint the keyboard is on.
+function leave() { if (!root.value?.querySelector(':focus-visible')) hide(); }
 </script>
 <template>
-  <span ref="root" class="oui-hint" @mouseenter="show" @mouseleave="hide" @focusin="show" @focusout="hide" @keydown.esc.stop="hide">
+  <span ref="root" class="oui-hint" @mouseenter="show" @mouseleave="leave" @focusin="show" @focusout="hide" @keydown.esc.stop="hide">
     <button type="button" class="oui-hint-btn" :aria-label="label" :aria-describedby="id" :aria-expanded="open" @click="show"><OuiIcon :icon="info" :size="14" /></button>
     <span v-show="open" :id="id" ref="bubble" class="oui-hint-bubble" role="tooltip" :style="place"><slot>{{ text }}</slot></span>
   </span>

@@ -7,7 +7,7 @@ import type { OuiIconData } from '../icons';
  * A context menu: a short list of actions at the pointer (right-click), or under the element (the keyboard's menu key or
  * Shift+F10, which send a contextmenu event with no coordinates). One instance per component:
  *   <OuiMenu ref="menu" />   @contextmenu="menu.open($event, items)"
- * The first item takes focus, arrows move, Enter picks, Escape closes and gives focus back to what opened it. It closes
+ * The first item takes focus, arrows move, Enter picks, Escape closes; picking or Escape gives focus back to what opened it. It closes
  * when focus moves to another element or the pointer is pressed outside it; focus merely lost (another window) keeps it.
  * Its own few lines rather than PrimeVue's ContextMenu (36 kB in a page).
  */
@@ -25,11 +25,12 @@ function open(event: MouseEvent, items: OuiMenuItem[]) {
   state.value = { x: keyboard ? r.left + 16 : event.clientX, y: keyboard ? r.bottom : event.clientY, items, back: at };
   // Fixed, from wherever the containing block puts (0, 0); kept inside the window.
   nextTick(() => { const m = el.value; if (!m || !state.value) return; m.style.transform = 'none'; const box = m.getBoundingClientRect();
-    const x = Math.min(state.value.x, innerWidth - box.width - 4); const y = Math.min(state.value.y, innerHeight - box.height - 4);
+    const x = Math.max(4, Math.min(state.value.x, innerWidth - box.width - 4)); const y = Math.max(4, Math.min(state.value.y, innerHeight - box.height - 4));
     m.style.transform = `translate(${x - box.left}px, ${y - box.top}px)`; m.querySelector<HTMLElement>('button:not(:disabled)')?.focus(); });
 }
 function close(refocus = false) { const back = state.value?.back; state.value = null; if (refocus) back?.focus(); }
-function pick(item: OuiMenuItem) { state.value = null; item.run(); }
+// Focus goes back to the opener first, so an action that opens a dialog or a field takes it from there, and one that does not leaves it there.
+function pick(item: OuiMenuItem) { close(true); item.run(); }
 function onKey(event: KeyboardEvent) {
   if (event.key === 'Escape' || event.key === 'Tab') { event.preventDefault(); close(true); return; }
   if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') return;

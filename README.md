@@ -1,4 +1,4 @@
-# Orca UI foundation 5.6.1 — Vue and PrimeVue
+# Orca UI foundation 5.6.2 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.6.1" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.6.2" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,16 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.6.2 fixes bugs found in a second review. It is a drop-in update.
+
+- The file browser's folder tree can always be reached with Tab, also after the open folder is renamed, moved or deleted, or when no folder is open.
+- Picking an item in a context menu gives focus back to what opened the menu, so a dialog that the item opens returns focus there too, instead of to the page.
+- A context menu opened in a window narrower than the menu stays on screen.
+- A file or a dashboard widget no longer starts dragging on its own when the button was released outside the window before the drag began.
+- `OuiSpark` skips a value that is `NaN` or infinite instead of drawing nothing.
+- `OuiSetpoint` shows no "0–" placeholder when it has no `max`.
+- `OuiHint` stays open while the keyboard is on it, even when the pointer leaves.
 
 Version 5.6.1 fixes bugs found in review. It is a drop-in update.
 
