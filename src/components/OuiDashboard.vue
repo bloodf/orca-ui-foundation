@@ -5,7 +5,10 @@ import type { OuiDashboardState, OuiLayoutItem, OuiWidgetSpec, OuiWidgetValue } 
 
 /** A widget the page offers: its place in the catalogue, its sizes (columns of 12, rows of 32 px) and its settings.
  *  `component` is the module itself (an OuiPanel); it gets `config` (settings with defaults filled in) when it has settings. */
-export interface OuiWidget extends OuiWidgetSpec { title: string; icon?: OuiIconData; /** One line in the catalogue. */ text?: string; component: Component }
+export interface OuiWidget extends OuiWidgetSpec { title: string; icon?: OuiIconData; /** One line in the catalogue. */ text?: string; component: Component;
+  /** The module fills whatever size it is given (a picture, a log): its content never makes its rows taller. Every other
+   *  widget is at least as tall as its content: rows grow to fit it, so nothing is cut off at any window width. */
+  fill?: boolean }
 export interface OuiDashboardLabels {
   toolbar: string; layout: string; edit: string; save: string; cancel: string; add: string; addTitle: string; added: string; close: string;
   newLayout: string; rename: string; remove: string; reset: string; create: string; apply: string; keep: string;
@@ -128,12 +131,28 @@ const cellStyle = (it: OuiLayoutItem) => (narrow.value ? undefined : { gridColum
 // `preview` is the layout as it would be, and the dragged widget follows the pointer over its place-to-be.
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: Handle[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-let op: { id: string; handle?: Handle; pointer: number; x: number; y: number; start: OuiLayoutItem; el: HTMLElement } | null = null;
+let op: { id: string; handle?: Handle; pointer: number; x: number; y: number; start: OuiLayoutItem; el: HTMLElement; tops: number[]; gy: number } | null = null;
+// Where each row starts (px from the grid's top), as laid out: a row grows to fit a widget's content, so rows are not all
+// one height. Past the last row they go on at the row's own height.
+function rowTops(): number[] {
+  const g = grid.value;
+  const sizes = g ? getComputedStyle(g).gridTemplateRows.split(' ').map(parseFloat).filter(n => Number.isFinite(n)) : [];
+  return sizes.reduce((tops, h) => [...tops, tops[tops.length - 1] + h + GAP], [0]);
+}
+const topOf = (tops: number[], row: number) => (row < tops.length ? tops[row] : tops[tops.length - 1] + (row - tops.length + 1) * STEP_Y);
+/** The row a point is in, with its fraction (2.5 = halfway down the third row). */
+function rowAt(tops: number[], y: number): number {
+  let k = 0;
+  while (k + 1 < tops.length && tops[k + 1] <= y) k++;
+  if (k + 1 >= tops.length) return k + (y - tops[k]) / STEP_Y;
+  return k + (y - tops[k]) / (tops[k + 1] - tops[k]);
+}
 const dragged = ref('');
 const offset = ref({ x: 0, y: 0 });
 function down(event: PointerEvent, it: OuiLayoutItem, handle?: Handle) {
   if (event.button !== 0 || !event.isPrimary || op || (event.target as HTMLElement).closest('button')) return;
-  op = { id: it.id, handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, start: { ...it }, el: event.currentTarget as HTMLElement };
+  op = { id: it.id, handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, start: { ...it }, el: event.currentTarget as HTMLElement,
+    tops: rowTops(), gy: event.clientY - (grid.value?.getBoundingClientRect().top ?? 0) };
   window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onCancel); window.addEventListener('keydown', onEscape, true);
 }
 function onMove(event: PointerEvent) {
@@ -144,11 +163,11 @@ function onMove(event: PointerEvent) {
     dragged.value = op.id;
     try { op.el.setPointerCapture(op.pointer); } catch { /* gone already: the up that follows ends it */ }
   }
-  const s = op.start, cx = Math.round(dx / stepX.value), cy = Math.round(dy / STEP_Y), size = sizeOf(op.id);
+  const s = op.start, cx = Math.round(dx / stepX.value), cy = Math.round(rowAt(op.tops, op.gy + dy) - rowAt(op.tops, op.gy)), size = sizeOf(op.id);
   if (!op.handle) {
     preview.value = move(draft.value, op.id, s.x + cx, s.y + cy, sizeOf);
     const now = preview.value.find(i => i.id === op!.id)!;
-    offset.value = { x: dx - (now.x - s.x) * stepX.value, y: dy - (now.y - s.y) * STEP_Y };
+    offset.value = { x: dx - (now.x - s.x) * stepX.value, y: dy - (topOf(op.tops, now.y) - topOf(op.tops, s.y)) };
     return;
   }
   const h = op.handle, minW = size?.minW ?? 1, maxW = size?.maxW ?? COLS, maxH = size?.maxH ?? 200;
@@ -277,7 +296,7 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
     <div ref="grid" class="oui-dash-grid" :data-narrow="narrow || undefined" :data-max="max || undefined" data-test="dash-grid">
       <p v-if="!items.length" class="oui-meta oui-dash-empty">{{ L.empty }}</p>
       <div v-if="dragged && !narrow" class="oui-dash-slot" :style="cellStyle(items.find(i => i.id === dragged)!)" aria-hidden="true" />
-      <div v-for="it in shown" v-show="!max || max === it.id" :key="it.id" class="oui-dash-cell" :data-widget="it.id" :data-dragged="dragged === it.id || undefined"
+      <div v-for="it in shown" v-show="!max || max === it.id" :key="it.id" class="oui-dash-cell" :data-widget="it.id" :data-fill="def(it.id).fill || undefined" :data-dragged="dragged === it.id || undefined"
            :style="[cellStyle(it), max === it.id ? { height: maxHeight + 'px' } : null, dragged === it.id ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : null]">
         <div class="oui-dash-body" :inert="editing || undefined"><component :is="def(it.id).component" v-bind="def(it.id).settings ? { config: configOf(it) } : {}" /></div>
         <div v-if="editing" class="oui-dash-frame" tabindex="0" role="group" :aria-label="L.widget(titleOf(it.id))" :data-frame="it.id"
@@ -311,22 +330,27 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
 .oui-dash-hint { margin: 0; }
 .oui-dash-empty { grid-column: 1 / -1; margin: 0; padding: var(--oui-s6); text-align: center; }
 
-/* 12 columns of 32 px rows. Each widget fills its cell; its body scrolls inside when its content is taller. The body of
-   a module is a size container (oui-widget), so a widget can fit its content to its size: the camera keeps its picture's
-   proportions, a log shows more lines, readouts go from compact to full. */
-.oui-dash-grid { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 32px; gap: 12px; min-width: 0; }
-.oui-dash-cell { position: relative; min-width: 0; min-height: 0; container: oui-cell / size; }
+/* 12 columns of rows of at least 32 px. A widget fills its cell, and a row grows when a widget's content needs more (a
+   narrower window wraps more): nothing is cut off, and the widgets beside it grow with the row, so columns stay even.
+   A module's body is a container (oui-widget) for its width. A filling widget (camera, log) never grows its rows: its
+   body is a size container, so it fits its content to both sizes (the camera keeps its picture's proportions, a log
+   shows more lines). */
+.oui-dash-grid { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(32px, auto); gap: 12px; min-width: 0; }
+.oui-dash-cell { position: relative; min-width: 0; }
+.oui-dash-cell[data-fill] { min-height: 0; container: oui-cell / size; }
 .oui-dash-body { height: 100%; min-height: 0; }
 .oui-dash-body > .oui-panel { height: 100%; min-height: 0; }
-.oui-dash-body > .oui-panel > .oui-panel-body { min-height: 0; overflow: auto; container: oui-widget / size; }
+.oui-dash-body > .oui-panel > .oui-panel-body { min-height: 0; container: oui-widget / inline-size; }
+.oui-dash-cell[data-fill] .oui-dash-body > .oui-panel > .oui-panel-body { overflow: auto; container: oui-widget / size; }
+.oui-dash-grid[data-max] .oui-dash-body > .oui-panel > .oui-panel-body { overflow: auto; }
 /* Narrow: one column in reading order, each widget as tall as its content. */
 .oui-dash-grid[data-narrow] { display: flex; flex-direction: column; }
 .oui-dash-grid[data-narrow] > .oui-dash-cell { container: oui-cell / inline-size; }
 .oui-dash-grid[data-narrow] .oui-dash-body > .oui-panel > .oui-panel-body { overflow: visible; container: oui-widget / inline-size; }
 /* A camera keeps its picture's shape (--oui-camera-w / --oui-camera-h, 16 / 9 by default) and fits the widget both ways. */
-.oui-dash-grid:not([data-narrow]) .oui-panel-body > .oui-camera { width: min(100%, 100cqh * var(--oui-camera-w, 16) / var(--oui-camera-h, 9)); min-height: 0; margin: auto; border-radius: 0; }
+.oui-dash-grid:not([data-narrow]) [data-fill] .oui-panel-body > .oui-camera { width: min(100%, 100cqh * var(--oui-camera-w, 16) / var(--oui-camera-h, 9)); min-height: 0; margin: auto; border-radius: 0; }
 /* The picture sits in the middle of the widget, on the camera's own ground: a widget of another shape shows bars, not a gap. */
-.oui-dash-grid:not([data-narrow]) .oui-panel-body:has(> .oui-camera) { display: flex; background: var(--oui-inset); border-radius: 0 0 var(--oui-radius-lg) var(--oui-radius-lg); }
+.oui-dash-grid:not([data-narrow]) [data-fill] .oui-panel-body:has(> .oui-camera) { display: flex; background: var(--oui-inset); border-radius: 0 0 var(--oui-radius-lg) var(--oui-radius-lg); }
 /* Maximised: the one widget, the full width, as tall as the window allows. */
 .oui-dash-grid[data-max] { display: block; }
 

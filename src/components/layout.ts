@@ -126,7 +126,9 @@ export function cleanItems(raw: unknown, specs: readonly OuiWidgetSpec[]): OuiLa
     const { id, x, y, w, h, cfg } = r as Record<string, unknown>;
     const spec = specs.find(s => s.id === id);
     if (!spec || out.some(i => i.id === id) || ![x, y, w, h].every(int)) continue;
-    const item: OuiLayoutItem = fit({ id: spec.id, x: x as number, y: y as number, w: w as number, h: h as number }, spec);
+    // A stored size keeps its rows: a least height by width is for resizing (a widget's rows grow to fit its content anyway).
+    const item: OuiLayoutItem = fit({ id: spec.id, x: x as number, y: y as number, w: w as number, h: h as number },
+      typeof spec.minH === 'function' ? { ...spec, minH: undefined } : spec);
     if (cfg && typeof cfg === 'object') {
       const kept = Object.fromEntries((spec.settings ?? []).map(s => [s.key, cleanValue(s, (cfg as Record<string, unknown>)[s.key])]).filter(([, v]) => v !== undefined));
       if (Object.keys(kept).length) item.cfg = kept;
