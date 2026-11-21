@@ -11,8 +11,19 @@ const MAX_ROWS = 200;
 export type OuiWidgetValue = string | number | boolean;
 /** One setting of a widget, shown in edit mode: a choice among values, or on/off. */
 export interface OuiWidgetSetting { key: string; label: string; default: OuiWidgetValue; options?: { value: string | number; label: string }[] }
-/** What a widget needs from the grid. Sizes are in columns (of COLS) and rows. */
-export interface OuiWidgetSize { w: number; h: number; minW?: number; minH?: number; maxW?: number; maxH?: number }
+/** What a widget needs from the grid. Sizes are in columns (of COLS) and rows. `minH` is a number of rows, or a function of
+ *  the width for a widget whose content wraps (it needs more rows when it is narrower): see rowsByWidth. */
+export interface OuiWidgetSize { w: number; h: number; minW?: number; minH?: number | ((w: number) => number); maxW?: number; maxH?: number }
+
+/** The least height of a widget at a width, in rows. */
+export const minHeight = (size: OuiWidgetSize | undefined, w: number) => Math.max(1, Math.ceil(typeof size?.minH === 'function' ? size.minH(w) : size?.minH ?? 1));
+
+/** A least height by width from measured steps, {4: 8, 8: 6, 12: 3}: at a width, the rows of the widest step not above it
+ *  (content needs fewer rows as it gets wider, so a width between two steps gets the narrower one's, never too few). */
+export function rowsByWidth(steps: Record<number, number>): (w: number) => number {
+  const keys = Object.keys(steps).map(Number).sort((a, b) => a - b);
+  return w => steps[[...keys].reverse().find(k => k <= w) ?? keys[0]];
+}
 export interface OuiLayoutItem { id: string; x: number; y: number; w: number; h: number; cfg?: Record<string, OuiWidgetValue> }
 export interface OuiLayout { name: string; items: OuiLayoutItem[] }
 /** What is saved: the layouts and which one shows. `v` is the format, for a later change of it. */
@@ -24,8 +35,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 
 /** Sizes within the widget's least and most, and the item inside the columns. */
 export function fit(item: OuiLayoutItem, size?: OuiWidgetSize, cols = COLS): OuiLayoutItem {
-  const minW = clamp(size?.minW ?? 1, 1, cols), minH = Math.max(1, size?.minH ?? 1);
+  const minW = clamp(size?.minW ?? 1, 1, cols);
   const w = clamp(item.w, minW, Math.max(minW, Math.min(cols, size?.maxW ?? cols)));
+  const minH = minHeight(size, w);
   const h = clamp(item.h, minH, Math.max(minH, size?.maxH ?? MAX_ROWS));
   return { ...item, w, h, x: clamp(item.x, 0, cols - w), y: clamp(item.y, 0, MAX_ROWS) };
 }
@@ -153,3 +165,16 @@ export function nameProblem(name: string, layouts: readonly OuiLayout[], except 
   return layouts.some((l, i) => i !== except && l.name.toLowerCase() === n.toLowerCase()) ? 'taken' : '';
 }
 export { cleanName };
+
+const sameItems = (a: unknown, b: readonly OuiLayoutItem[]) => Array.isArray(a) && a.length === b.length && b.every(r => a.some(i =>
+  !!i && typeof i === 'object' && i.id === r.id && i.x === r.x && i.y === r.y && i.w === r.w && i.h === r.h && !i.cfg));
+
+/** A page that changes its default layout: every stored layout whose widgets are still exactly an earlier default
+ *  (`retired`; places and sizes, no settings) was never arranged by the user, so it gets today's default `items`. Every
+ *  other layout, and anything that is not a dashboard, is handed back as it was. */
+export function replaceRetired(raw: unknown, retired: readonly (readonly OuiLayoutItem[])[], items: readonly OuiLayoutItem[]): unknown {
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as OuiDashboardState).layouts)) return raw;
+  const layouts = (raw as OuiDashboardState).layouts;
+  if (!layouts.some(l => l && retired.some(r => sameItems(l.items, r)))) return raw;
+  return { ...raw, layouts: layouts.map(l => (l && retired.some(r => sameItems(l.items, r)) ? { ...l, items: items.map(i => ({ ...i })) } : l)) };
+}

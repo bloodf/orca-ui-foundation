@@ -35,7 +35,7 @@ import Select from 'primevue/select';
 import ToggleSwitch from 'primevue/toggleswitch';
 import OuiIcon from './OuiIcon.vue';
 import { dashboard, edit, plus, settings as gear, trash, undo, x as close, check } from '../icons';
-import { COLS, MAX_LAYOUTS, add, cleanName, move, nameProblem, ordered, remove, resize, validate, type OuiLayout } from './layout';
+import { COLS, MAX_LAYOUTS, add, cleanName, minHeight, move, nameProblem, ordered, remove, resize, validate, type OuiLayout } from './layout';
 
 /*
  * The dashboard as a grid the user arranges: widgets on 12 columns and 32 px rows, rising to fill holes. Edit layout
@@ -151,12 +151,12 @@ function onMove(event: PointerEvent) {
     offset.value = { x: dx - (now.x - s.x) * stepX.value, y: dy - (now.y - s.y) * STEP_Y };
     return;
   }
-  const h = op.handle, minW = size?.minW ?? 1, minH = size?.minH ?? 1, maxW = size?.maxW ?? COLS, maxH = size?.maxH ?? 200;
+  const h = op.handle, minW = size?.minW ?? 1, maxW = size?.maxW ?? COLS, maxH = size?.maxH ?? 200;
   let { x, y, w, h: ht } = s;
   if (h.includes('e')) w = s.w + cx;
   if (h.includes('s')) ht = s.h + cy;
   if (h.includes('w')) { const d = Math.max(-s.x, s.w - maxW, Math.min(cx, s.w - minW)); x = s.x + d; w = s.w - d; }
-  if (h.includes('n')) { const d = Math.max(-s.y, s.h - maxH, Math.min(cy, s.h - minH)); y = s.y + d; ht = s.h - d; }
+  if (h.includes('n')) { const d = Math.max(-s.y, s.h - maxH, Math.min(cy, s.h - minHeight(size, w))); y = s.y + d; ht = s.h - d; }
   preview.value = resize(draft.value, op.id, w, ht, sizeOf, x, y);
 }
 function end() {
@@ -324,7 +324,9 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
 .oui-dash-grid[data-narrow] > .oui-dash-cell { container: oui-cell / inline-size; }
 .oui-dash-grid[data-narrow] .oui-dash-body > .oui-panel > .oui-panel-body { overflow: visible; container: oui-widget / inline-size; }
 /* A camera keeps its picture's shape (--oui-camera-w / --oui-camera-h, 16 / 9 by default) and fits the widget both ways. */
-.oui-dash-grid:not([data-narrow]) .oui-panel-body > .oui-camera { width: min(100%, 100cqh * var(--oui-camera-w, 16) / var(--oui-camera-h, 9)); min-height: 0; margin-inline: auto; border-radius: 0; }
+.oui-dash-grid:not([data-narrow]) .oui-panel-body > .oui-camera { width: min(100%, 100cqh * var(--oui-camera-w, 16) / var(--oui-camera-h, 9)); min-height: 0; margin: auto; border-radius: 0; }
+/* The picture sits in the middle of the widget, on the camera's own ground: a widget of another shape shows bars, not a gap. */
+.oui-dash-grid:not([data-narrow]) .oui-panel-body:has(> .oui-camera) { display: flex; background: var(--oui-inset); border-radius: 0 0 var(--oui-radius-lg) var(--oui-radius-lg); }
 /* Maximised: the one widget, the full width, as tall as the window allows. */
 .oui-dash-grid[data-max] { display: block; }
 
@@ -334,8 +336,8 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
 .oui-dash-frame { position: absolute; inset: 0; z-index: 1; border-radius: var(--oui-radius-lg); background: color-mix(in srgb, var(--oui-background) 45%, transparent); box-shadow: inset 0 0 0 1px var(--oui-control-border); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .oui-dash-frame:hover { box-shadow: inset 0 0 0 1px var(--oui-primary-mark); }
 .oui-dash-frame:focus-visible { outline: 2px solid var(--oui-primary-mark); outline-offset: 2px; }
-.oui-dash-frame-bar { position: absolute; inset: 6px 6px auto 6px; display: flex; align-items: center; gap: var(--oui-s1); padding: 2px; border-radius: var(--oui-radius); background: var(--oui-raised); box-shadow: inset 0 0 0 1px var(--oui-border); }
-.oui-dash-frame-name { flex: 1 1 auto; min-width: 0; overflow: hidden; padding: 2px 6px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.oui-dash-frame-bar { position: absolute; inset: 6px 6px auto auto; max-width: calc(100% - 12px); display: flex; align-items: center; gap: var(--oui-s1); padding: 2px; border-radius: var(--oui-radius); background: var(--oui-raised); box-shadow: inset 0 0 0 1px var(--oui-border); }
+.oui-dash-frame-name { flex: 0 1 auto; min-width: 0; overflow: hidden; padding: 2px 6px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .oui-dash-frame-name > .oui-num { margin-inline-start: var(--oui-s1); font-weight: 400; color: var(--oui-muted); }
 .oui-dash-cell[data-dragged] { z-index: 3; }
 .oui-dash-cell[data-dragged] .oui-dash-frame { cursor: grabbing; background: color-mix(in srgb, var(--oui-surface) 60%, transparent); box-shadow: inset 0 0 0 1px var(--oui-primary-mark), var(--oui-shadow-overlay); }
