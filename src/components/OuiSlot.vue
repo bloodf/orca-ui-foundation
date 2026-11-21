@@ -19,12 +19,13 @@ const empty = computed(() => !props.name && !props.material);
 const paint = computed(() => {
   const list = props.colors && props.colors.length > 1 ? props.colors : null;
   if (list) return 'linear-gradient(90deg, ' + list.map((c, i) => `${c} ${(i * 100) / list.length}% ${((i + 1) * 100) / list.length}%`).join(', ') + ')';
-  return props.color || '';
+  return props.color || props.colors?.[0] || '';
 });
 const fraction = computed(() => (typeof props.remaining === 'number' && typeof props.initial === 'number' && props.initial > 0
   ? Math.max(0, Math.min(1, props.remaining / props.initial)) : null));
 // The page language, not the browser's: a pt-BR page in an English browser still writes 1.380.
-const grams = (n: number) => Math.round(n).toLocaleString(document.documentElement.lang || undefined);
+// A lang that is not a valid tag ("pt_BR") falls back to the browser's locale instead of throwing.
+const grams = (n: number) => { try { return Math.round(n).toLocaleString(document.documentElement.lang || undefined); } catch { return Math.round(n).toLocaleString(); } };
 </script>
 <template>
   <article class="oui-slot" :data-active="active || undefined" :data-empty="empty || undefined">

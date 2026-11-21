@@ -67,7 +67,7 @@ const draft = ref<OuiLayoutItem[]>([]);
 const preview = ref<OuiLayoutItem[] | null>(null);
 const dirty = computed(() => editing.value && JSON.stringify(draft.value) !== JSON.stringify(layout.value.items));
 const items = computed(() => (editing.value ? preview.value ?? draft.value : layout.value.items));
-function startEdit() { draft.value = layout.value.items.map(i => ({ ...i })); strip.value = null; max.value = ''; editing.value = true; }
+function startEdit() { if (narrow.value) return; draft.value = layout.value.items.map(i => ({ ...i })); strip.value = null; max.value = ''; editing.value = true; }
 function stopEdit() { editing.value = false; preview.value = null; strip.value = null; }
 function saveEdit() { store({ active: state.value.active, layouts: state.value.layouts.map((l, i) => (i === state.value.active ? { ...l, items: draft.value } : l)) }); stopEdit(); }
 function choose(i: number) { if (i !== state.value.active) store({ ...state.value, active: i }); }
@@ -131,7 +131,7 @@ const cellStyle = (it: OuiLayoutItem) => (narrow.value ? undefined : { gridColum
 // `preview` is the layout as it would be, and the dragged widget follows the pointer over its place-to-be.
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: Handle[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-let op: { id: string; handle?: Handle; pointer: number; x: number; y: number; start: OuiLayoutItem; el: HTMLElement; tops: number[]; gy: number } | null = null;
+let op: { id: string; handle?: Handle; pointer: number; x: number; y: number; start: OuiLayoutItem; el: HTMLElement; tops: number[]; gy: number; top: number } | null = null;
 // Where each row starts (px from the grid's top), as laid out: a row grows to fit a widget's content, so rows are not all
 // one height. Past the last row they go on at the row's own height.
 function rowTops(): number[] {
@@ -152,12 +152,14 @@ const offset = ref({ x: 0, y: 0 });
 function down(event: PointerEvent, it: OuiLayoutItem, handle?: Handle) {
   if (event.button !== 0 || !event.isPrimary || op || (event.target as HTMLElement).closest('button')) return;
   op = { id: it.id, handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, start: { ...it }, el: event.currentTarget as HTMLElement,
-    tops: rowTops(), gy: event.clientY - (grid.value?.getBoundingClientRect().top ?? 0) };
+    tops: rowTops(), top: grid.value?.getBoundingClientRect().top ?? 0, gy: 0 };
+  op.gy = event.clientY - op.top;
   window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onCancel); window.addEventListener('keydown', onEscape, true);
 }
 function onMove(event: PointerEvent) {
   if (!op || event.pointerId !== op.pointer) return;
-  const dx = event.clientX - op.x, dy = event.clientY - op.y;
+  // Measured against the grid, not the window: the page may scroll while the pointer is down.
+  const dx = event.clientX - op.x, dy = event.clientY - op.y + op.top - (grid.value?.getBoundingClientRect().top ?? op.top);
   if (!dragged.value) {
     if (Math.hypot(dx, dy) < SLOP) return;
     dragged.value = op.id;
