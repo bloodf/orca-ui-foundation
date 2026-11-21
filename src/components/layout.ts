@@ -149,15 +149,17 @@ export function validate(raw: unknown, specs: readonly OuiWidgetSpec[], defaults
   if (v !== 1 || !Array.isArray(layouts) || !layouts.length) return fallback;
   const names = new Set<string>();
   const kept: OuiLayout[] = [];
-  for (const l of layouts.slice(0, MAX_LAYOUTS)) {
+  let open = 0;
+  for (const [i, l] of layouts.slice(0, MAX_LAYOUTS).entries()) {
     if (!l || typeof l !== 'object') continue;
+    if (i === active) open = kept.length;
     let name = cleanName((l as OuiLayout).name) || `${defaults.name} ${kept.length + 1}`;
     for (let n = 2; names.has(name.toLowerCase()); n++) name = `${cleanName((l as OuiLayout).name) || defaults.name} ${n}`;
     names.add(name.toLowerCase());
     kept.push({ name, items: cleanItems((l as OuiLayout).items, specs) });
   }
   if (!kept.length) return fallback;
-  return { v: 1, active: int(active) && active >= 0 && active < kept.length ? active : 0, layouts: kept };
+  return { v: 1, active: open, layouts: kept };
 }
 
 /** Why a name cannot be used for a layout, or '' when it can. */

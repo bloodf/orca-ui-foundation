@@ -38,7 +38,7 @@ const wind = computed(() => (level.value < 8 ? src(`n${level.value}-fio`) : ''))
 // Empty paints the raw grey filament.
 const paint = computed(() => {
   const cs = props.colors && props.colors.length > 1 ? props.colors : null;
-  if (!cs) return props.color || '#9a9a9a';
+  if (!cs) return props.color || props.colors?.[0] || '#9a9a9a';
   if (props.direction === 'longitudinal') return `linear-gradient(135deg, ${cs.join(', ')})`;
   if (props.direction === 'coaxial') {
     const step = 360 / cs.length;

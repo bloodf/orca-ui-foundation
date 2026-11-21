@@ -1,4 +1,4 @@
-# Orca UI foundation 5.6.0 — Vue and PrimeVue
+# Orca UI foundation 5.6.1 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.6.0" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.6.1" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,17 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.6.1 fixes bugs found in review. It is a drop-in update.
+
+- A settings page opened with a malformed address hash (`#%`) starts at its first section instead of not showing at all.
+- A filament given as a one-element `colors` list without `color` shows that colour on `OuiSwatch`, `OuiSlot` and `OuiSpool`, not the unknown pattern.
+- Dragging a dashboard widget while the page scrolls drops it on the row under the pointer.
+- A stored dashboard with a broken layout entry opens the layout that was open, not its neighbour.
+- `edit()` on a dashboard does nothing while it is one column, like the Edit button.
+- A folder list whose parents loop no longer freezes the file browser.
+- `OuiSlot` writes grams in the browser's locale when the page's `lang` is not a valid language tag (`pt_BR`) instead of failing.
+- `OuiConfirm` gives focus back to an opener that is `position: fixed`.
 
 Version 5.6.0: dashboard rows grow to fit content, so a widget is never cut off and a layout has no holes at any window width.
 

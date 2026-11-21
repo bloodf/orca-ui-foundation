@@ -95,6 +95,8 @@ test('validate keeps good layouts, names them uniquely and keeps the active one 
   assert.deepEqual(st.layouts.map(l => l.name), ['Print', 'print 2', 'Default 3']);
   assert.equal(st.active, 0);
   assert.equal(validate({ v: 1, active: 1, layouts: [{ name: 'a', items: [] }, { name: 'b', items: [] }] }, SPECS, { name: 'D', items: [] }).active, 1);
+  assert.equal(validate({ v: 1, active: 2, layouts: [null, { name: 'a', items: [] }, { name: 'b', items: [] }] }, SPECS, { name: 'D', items: [] }).active, 1,
+    'a dropped broken layout does not move which one is open');
   const round = validate(JSON.parse(JSON.stringify(st)), SPECS, { name: 'Default', items: BASE });
   assert.deepEqual(round, st, 'a saved dashboard reads back the same');
 });

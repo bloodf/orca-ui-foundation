@@ -17,7 +17,7 @@ let opener: HTMLElement | null = null;
 watch(() => props.visible, (on) => { if (on) opener = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null; });
 function afterHide() {
   const back = opener; opener = null;
-  if (back?.isConnected && back.offsetParent !== null) back.focus();
+  if (back?.isConnected && back.getClientRects().length) back.focus();
   emit('closed');
 }
 </script>

@@ -92,7 +92,7 @@ const children = computed(() => {
   for (const f of props.folders) { const key = f.parent ?? ''; map.set(key, [...(map.get(key) ?? []), f]); }
   return map;
 });
-const trail = (id: string): OuiFolder[] => { const out: OuiFolder[] = []; for (let f = byId.value.get(id); f; f = f.parent ? byId.value.get(f.parent) : undefined) out.unshift(f); return out; };
+const trail = (id: string): OuiFolder[] => { const out: OuiFolder[] = []; for (let f = byId.value.get(id); f && !out.includes(f); f = f.parent ? byId.value.get(f.parent) : undefined) out.unshift(f); return out; };
 const path = computed(() => trail(props.folder));
 const expanded = ref(new Set<string>());
 // The open folder is always visible in the tree, and the roots start open.

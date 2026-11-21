@@ -43,8 +43,10 @@ let footSizes: ResizeObserver | undefined;
 
 const storeKey = () => 'oui-settings:' + location.pathname + ':' + props.sections.map(s => s.id).join(',');
 const known = (id: string | null | undefined) => !!id && props.sections.some(s => s.id === id);
+// A hand-typed hash such as "#%" is not valid percent-encoding: it names no section rather than stopping the page.
+function fromHash(): string { try { return decodeURIComponent(location.hash.slice(1)); } catch { return ''; } }
 function initial(): string {
-  const hash = typeof location !== 'undefined' ? decodeURIComponent(location.hash.slice(1)) : '';
+  const hash = typeof location !== 'undefined' ? fromHash() : '';
   if (known(hash)) return hash;
   let saved: string | null = null;
   try { saved = localStorage.getItem(storeKey()); } catch { /* storage blocked: start at the first section */ }
@@ -127,7 +129,7 @@ function onFocusIn(event: FocusEvent) {
   if (section && section.id !== current.value) current.value = section.id;
 }
 let mutations: MutationObserver | undefined; let sizes: ResizeObserver | undefined;
-const onHash = () => { const id = decodeURIComponent(location.hash.slice(1)); if (known(id)) select(id); };
+const onHash = () => { const id = fromHash(); if (known(id)) select(id); };
 onMounted(() => {
   sync();
   if (body.value && typeof MutationObserver !== 'undefined') {

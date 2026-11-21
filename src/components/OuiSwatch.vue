@@ -6,7 +6,7 @@ const props = defineProps<{ color?: string | null; /** Multi-colour filament: pa
 const paint = computed(() => {
   const list = props.colors && props.colors.length > 1 ? props.colors : null;
   if (list) return 'linear-gradient(90deg, ' + list.map((c, i) => `${c} ${(i * 100) / list.length}% ${((i + 1) * 100) / list.length}%`).join(', ') + ')';
-  return props.color || '';
+  return props.color || props.colors?.[0] || '';
 });
 </script>
 <template>
