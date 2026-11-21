@@ -1,4 +1,4 @@
-# Orca UI foundation 5.4.0 — Vue and PrimeVue
+# Orca UI foundation 5.5.0 — Vue and PrimeVue
 
 Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licences in `licenses/`).
 
@@ -7,7 +7,7 @@ Repository: https://github.com/bloodf/orca-ui-foundation (MIT; third-party licen
 Since 5.0.8 the plugins no longer vendor a copy in `ui/shared/`. They depend on a release tag of this repository:
 
 ```json
-"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.4.0" }
+"dependencies": { "@orca-plugins/ui-foundation": "github:bloodf/orca-ui-foundation#v5.5.0" }
 ```
 
 npm and pnpm install it straight from GitHub (no registry, no build step: the package is TypeScript and Vue sources that the plugin's own Vite build compiles). Imports:
@@ -30,6 +30,13 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 6. Renovate in each plugin sees the new tag, opens a PR bumping `github:bloodf/orca-ui-foundation#v…` and its lockfile, and merges it itself when the plugin's CI is green. A release that changes `vue`, `primevue` or `@primeuix/themes` also needs the plugin's own pins changed in the same PR (the peer pins otherwise fail the install, so that PR stays open for a person).
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
+
+Version 5.5.0 lets a dashboard widget never clip, and lets a page change its default layout. It is additive.
+
+- A widget's `minH` can be a function of its width: content that wraps needs more rows when the widget is narrower. `rowsByWidth({ 4: 8, 8: 6, 12: 3 })` builds one from measured steps (the rows of the widest step not above the width). Resizing, adding and stored layouts all keep each widget at least that tall, so a size the grid allows never makes its content clip or scroll.
+- `replaceRetired(stored, retired, items)`: a stored layout whose widgets are still exactly an earlier default (`retired`, places and sizes, no settings) gets today's default `items`; every other layout stays as it was. Give the page's v-model value through it.
+- Edit mode: the frame's bar (name, size, settings, remove) sits at the top right instead of across the widget, so it no longer hides the top of a widget without a header (a status block).
+- A camera in a widget is centred on the camera's own ground, so a widget of another shape shows bars instead of a gap under the picture.
 
 Version 5.4.0 adds a dashboard the user arranges: `OuiDashboard`, its layout model and `OuiWidgetMaximize`. It is additive: nothing else changes, apart from `OuiCamera` taking its shape from two variables.
 

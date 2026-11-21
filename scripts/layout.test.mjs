@@ -1,7 +1,7 @@
 // Unit tests of the dashboard's layout model (src/components/layout.ts): node --test scripts/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COLS, add, cleanItems, collides, compact, fit, freeSpot, move, nameProblem, ordered, remove, resize, validate } from '../src/components/layout.ts';
+import { COLS, add, cleanItems, collides, compact, fit, freeSpot, minHeight, move, nameProblem, ordered, remove, replaceRetired, resize, rowsByWidth, validate } from '../src/components/layout.ts';
 
 const SPECS = [
   { id: 'job', w: 12, h: 3, minW: 4, minH: 2 },
@@ -105,4 +105,32 @@ test('nameProblem refuses empty names and a name in use (any case), except the l
   assert.equal(nameProblem('camera', ls), 'taken');
   assert.equal(nameProblem('Camera', ls, 1), '');
   assert.equal(nameProblem('Night', ls), '');
+});
+
+test('a least height by width: narrower needs more rows, and a resize or a stored size never goes under it', () => {
+  const byW = rowsByWidth({ 4: 8, 8: 5, 12: 3 });
+  assert.deepEqual([3, 4, 7, 8, 11, 12].map(byW), [8, 8, 8, 5, 5, 3], 'below the first step its rows, between steps the narrower one');
+  const job = { id: 'job', w: 12, h: 3, minW: 4, minH: byW };
+  assert.equal(minHeight(job, 6), 8);
+  assert.equal(minHeight({ w: 1, h: 1, minH: 2.2 }, 3), 3, 'whole rows');
+  const sizeOf2 = id => (id === 'job' ? job : sizeOf(id));
+  const items = [{ id: 'job', x: 0, y: 0, w: 12, h: 3 }, { id: 'log', x: 0, y: 3, w: 8, h: 6 }];
+  assert.deepEqual(at(resize(items, 'job', 8, 3, sizeOf2), 'job'), [0, 0, 8, 5], 'narrower: taller');
+  assert.deepEqual(at(resize(items, 'job', 12, 1, sizeOf2), 'job'), [0, 0, 12, 3], 'full width: its own least');
+  assert.deepEqual(cleanItems([{ id: 'job', x: 0, y: 0, w: 4, h: 3 }], [job])[0].h, 8, 'a stored size under it grows');
+});
+
+test('a layout still exactly as an earlier default gets the new default; arranged layouts and broken data stay as they are', () => {
+  const OLD = [{ id: 'job', x: 0, y: 0, w: 12, h: 3 }, { id: 'log', x: 0, y: 3, w: 8, h: 6 }];
+  const NEW = [{ id: 'job', x: 0, y: 0, w: 12, h: 3 }, { id: 'cam', x: 0, y: 3, w: 4, h: 6 }];
+  const mine = [{ id: 'job', x: 0, y: 0, w: 12, h: 3 }, { id: 'log', x: 0, y: 3, w: 8, h: 7 }];
+  const raw = { v: 1, active: 1, layouts: [{ name: 'Default', items: [OLD[1], OLD[0]] }, { name: 'Mine', items: mine },
+    { name: 'Set', items: [OLD[0], { ...OLD[1], cfg: { lines: 100 } }] }] };
+  const out = replaceRetired(raw, [OLD], NEW);
+  assert.deepEqual(out.layouts.map(l => l.items), [NEW, mine, raw.layouts[2].items], 'only the untouched default changes (order does not matter; a setting is a change)');
+  assert.equal(out.active, 1);
+  assert.equal(raw.layouts[0].items[0], OLD[1], 'the stored value is not changed');
+  for (const x of [undefined, null, 'x', { v: 1 }]) assert.equal(replaceRetired(x, [OLD], NEW), x);
+  const kept = { v: 1, active: 0, layouts: [{ name: 'Mine', items: mine }] };
+  assert.equal(replaceRetired(kept, [OLD], NEW), kept, 'nothing to replace: the same object');
 });

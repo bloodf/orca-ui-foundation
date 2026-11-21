@@ -5,7 +5,7 @@ export { default as OuiConfirm } from './OuiConfirm.vue';
 export { default as OuiControlRow } from './OuiControlRow.vue';
 export { default as OuiDashboard, OUI_DASHBOARD_LABELS, type OuiWidget, type OuiDashboardLabels, type OuiDashboardState, type OuiLayoutItem, type OuiWidgetValue } from './OuiDashboard.vue';
 export { default as OuiWidgetMaximize } from './OuiWidgetMaximize.vue';
-export { COLS, validate as validateLayout, type OuiLayout, type OuiWidgetSetting, type OuiWidgetSize } from './layout';
+export { COLS, replaceRetired, rowsByWidth, validate as validateLayout, type OuiLayout, type OuiWidgetSetting, type OuiWidgetSize } from './layout';
 export { default as OuiEmpty } from './OuiEmpty.vue';
 export { default as OuiFileBrowser, type OuiFile, type OuiFolder, type OuiFileBrowserLabels, type OuiFolderNameError, type OuiFileOp, type OuiFileMenuItem } from './OuiFileBrowser.vue';
 export { useFileBackend, type OuiFileBackend, type OuiFileBackendOptions, type OuiFileAction } from './fileBackend';
