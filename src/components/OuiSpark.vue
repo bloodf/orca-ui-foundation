@@ -10,17 +10,18 @@ const props = defineProps<{ values: (number | null)[]; type?: 'line' | 'bars'; t
   /** Fixed scale; default is the series' own range (bars always start at 0). */ min?: number; max?: number;
   /** A value to hold (a heater's target): drawn as a dashed line. */ target?: number | null }>();
 const W = computed(() => props.width ?? 96); const H = computed(() => props.height ?? 28);
-const known = computed(() => props.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v)));
+const ok = (v: number | null): v is number => typeof v === 'number' && Number.isFinite(v);
+const known = computed(() => props.values.filter(ok));
 const withTarget = computed(() => (typeof props.target === 'number' ? [...known.value, props.target] : known.value));
 const lo = computed(() => props.min ?? (props.type === 'bars' ? 0 : Math.min(...withTarget.value)));
 const hi = computed(() => { const top = props.max ?? Math.max(...withTarget.value); return top > lo.value ? top : lo.value + 1; });
 const y = (v: number) => H.value - 2 - ((v - lo.value) / (hi.value - lo.value)) * (H.value - 4);
-const points = computed(() => props.values.map((v, i) => (typeof v === 'number' ? [props.values.length > 1 ? (i / (props.values.length - 1)) * (W.value - 2) + 1 : W.value / 2, y(v)] : null))
+const points = computed(() => props.values.map((v, i) => (ok(v) ? [props.values.length > 1 ? (i / (props.values.length - 1)) * (W.value - 2) + 1 : W.value / 2, y(v)] : null))
   .filter((p): p is number[] => p !== null));
 const line = computed(() => points.value.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(''));
 const area = computed(() => (points.value.length > 1 ? `${line.value}L${points.value[points.value.length - 1][0].toFixed(1)} ${H.value}L${points.value[0][0].toFixed(1)} ${H.value}Z` : ''));
 const bars = computed(() => { const slot = W.value / Math.max(1, props.values.length); const w = Math.max(2, slot - 2);
-  return props.values.map((v, i) => (typeof v === 'number' ? { x: i * slot + (slot - w) / 2, y: Math.min(y(v), H.value - 3), w, h: Math.max(1, H.value - 2 - Math.min(y(v), H.value - 3)) } : null)); });
+  return props.values.map((v, i) => (ok(v) ? { x: i * slot + (slot - w) / 2, y: Math.min(y(v), H.value - 3), w, h: Math.max(1, H.value - 2 - Math.min(y(v), H.value - 3)) } : null)); });
 </script>
 <template>
   <svg class="oui-spark" :data-tone="tone ?? 'primary'" :width="W" :height="H" :viewBox="`0 0 ${W} ${H}`" role="img" :aria-label="label" focusable="false">

@@ -110,12 +110,14 @@ const nodes = computed(() => {
   return out;
 });
 const treeFocus = ref(props.folder);
+// The one tree item Tab reaches: the remembered one while it is shown, else the open folder, else the first.
+const treeStop = computed(() => [treeFocus.value, props.folder].find(id => nodes.value.some(n => n.folder.id === id)) ?? nodes.value[0]?.folder.id);
 const tree = ref<HTMLElement>();
 function toggle(id: string, open?: boolean) { const next = new Set(expanded.value); (open ?? !next.has(id)) ? next.add(id) : next.delete(id); expanded.value = next; }
 function focusFolder(id: string) { treeFocus.value = id; nextTick(() => tree.value?.querySelector<HTMLElement>(`[data-folder="${CSS.escape(id)}"]`)?.focus()); }
 function openFolder(id: string) { treeFocus.value = id; if (id !== props.folder) { emit('update:selected', []); emit('update:folder', id); } }
 function onTreeKey(event: KeyboardEvent) {
-  const list = nodes.value; const at = list.findIndex(n => n.folder.id === treeFocus.value); const node = list[at];
+  const list = nodes.value; const at = list.findIndex(n => n.folder.id === treeStop.value); const node = list[at];
   if (!node) return;
   const go = (i: number) => { const n = list[Math.max(0, Math.min(list.length - 1, i))]; if (n) focusFolder(n.folder.id); };
   switch (event.key) {
@@ -260,7 +262,8 @@ function startDrag() {
 function onDragMove(event: PointerEvent) {
   if (!press || event.pointerId !== press.pointer) return;
   point = { x: event.clientX, y: event.clientY };
-  if (!dragging.value.length) { if (Math.hypot(point.x - press.x, point.y - press.y) < DRAG_SLOP) return; startDrag(); }
+  // The button is up but its pointerup never came (released outside the window before the drag began): no drag.
+  if (!dragging.value.length) { if (!(event.buttons & 1)) { endDrag(); return; } if (Math.hypot(point.x - press.x, point.y - press.y) < DRAG_SLOP) return; startDrag(); }
   if (!frame) frame = requestAnimationFrame(() => { frame = 0; place(); hover(); });
 }
 function endDrag() {
@@ -462,7 +465,7 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
       <p class="oui-label oui-files-railhead">{{ labels.folders }}</p>
       <div ref="tree" class="oui-files-tree" role="tree" :aria-label="labels.folders" @keydown="onTreeKey" @contextmenu="onTreeMenu">
         <template v-for="node in nodes" :key="node.folder.id"><div role="treeitem" class="oui-files-folder" :data-folder="node.folder.id" :aria-level="node.depth" :aria-expanded="node.branch ? node.open : undefined"
-          :aria-selected="node.folder.id === folder" :aria-current="node.folder.id === folder ? 'true' : undefined" :tabindex="node.folder.id === treeFocus ? 0 : -1"
+          :aria-selected="node.folder.id === folder" :aria-current="node.folder.id === folder ? 'true' : undefined" :tabindex="node.folder.id === treeStop ? 0 : -1"
           :data-drop="dropOn === node.folder.id || undefined" :data-refused="(active && !canDrop(node.folder.id)) || undefined" :style="{ paddingInlineStart: 4 + (node.depth - 1) * 16 + 'px' }"
           :data-dragged="(dragKind === 'folder' && dragging.includes(node.folder.id)) || undefined" @click="openFolder(node.folder.id)" @focus="treeFocus = node.folder.id"
           @contextmenu="onFolderMenu($event, node.folder.id)" @pointerdown="onFolderPointerDown($event, node.folder.id)" @dragstart.prevent>

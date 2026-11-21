@@ -97,7 +97,7 @@ const show = (n: number | null | undefined) => (n == null || !Number.isFinite(n)
     </div>
     <OuiSpark v-if="history" class="oui-setpoint-spark" :values="history" :tone="hue" :target="target || null" :label="historyLabel ?? label" :width="88" :height="28" />
     <div class="oui-setpoint-control" @keydown.enter="onEnter">
-      <InputNumber v-model="draft" :min="validate ? undefined : min" :max="validate ? undefined : max" :placeholder="`${min ?? 0}–${max ?? ''}`" :disabled="disabled" :aria-label="inputLabel"
+      <InputNumber v-model="draft" :min="validate ? undefined : min" :max="validate ? undefined : max" :placeholder="max != null ? `${min ?? 0}–${max}` : undefined" :disabled="disabled" :aria-label="inputLabel"
         :input-id="inputId" :invalid="!!shownError || invalid || undefined" :pt="fieldPt" size="small" :input-style="FIELD_STYLE" :max-fraction-digits="maxFractionDigits" :locale="locale" v-bind="inputProps" @input="onType" />
       <Button :label="setLabel" severity="secondary" size="small" :disabled="disabled || draft == null || asking || invalid" :data-set="name" :aria-label="setAriaLabel" :aria-describedby="describedby" @click="send" />
       <Button :label="offLabel" severity="secondary" text size="small" :disabled="disabled || (!target && !offAlways)" :data-off="name" :aria-label="offAriaLabel" :aria-describedby="describedby" @click="emit('off')" />
