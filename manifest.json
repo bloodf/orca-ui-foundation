@@ -1,12 +1,12 @@
 {
-  "version": "5.8.0",
+  "version": "5.9.0",
   "dependencies": {
     "@primeuix/themes": "3.1.1",
     "primevue": "5.0.5",
     "vue": "3.5.46"
   },
   "files": {
-    "src/index.ts": "a9bb2530dc428ff975c37f24261ffc8d891bcb5824d67672102054f547e27882",
+    "src/index.ts": "eeaf44e3c1ba1958e16306f05285efc9a21b3cb95dca5fcda3f6c7e7fcb6c585",
     "src/license.ts": "f2c83aeec15ac664d478bf5258bc1864ccf2dfe6d2bd4ab826596b118b630f89",
     "src/theme.ts": "a8dc165577f04362b5e7d8601549fd146e5087e90cc2feb1f113f97318eb2d79",
     "src/palette.json": "3cd24ad437b8937db36b0201674e3c54f7b30d0dd751ba587b69918fb20b522c",
@@ -66,12 +66,12 @@
     "src/assets/spool/n7-corpo.webp": "f466ba5091636bcab177e2af28b8e05c544ebe0a0bc95f0cf7e4333e7e50938f",
     "src/assets/spool/n7-fio.webp": "ded28c578f6db79dabcaad74d66d9fd87d29357365e6029c6df70b782817d1a9",
     "src/assets/spool/n8-corpo.webp": "b0653853a32d321e34611171d81e1cc9f437efb542f06c2da7361d8dc7f88eaf",
-    "python/filmatch.py": "7a508e111240ab9862f5f2108967d86f10321d9a832c89bba027bed2c6b6162c",
-    "package.json": "eac5cd154710b17e78ab67d7f146aee5b458cece70185b53739a2cc1c166cc6b",
+    "python/filmatch.py": "f625402bfdb4c1bf2c3e61f5f9aaab1352077363782af9a0cb2fb04188016f32",
+    "package.json": "dfcdbacf2cfcba44dfea6370f7c5a33abe69f4c18011f81675a0a44901c8f83a",
     "package-lock.json": "2bb47825a7901e600a83fbd5b3b05e66383b8cd7c7fafab08d17454acf8b59f3",
     "scripts/check.mjs": "1cedec7f8a1768b4e3c01dcbdde1a5f5bd652e750ac448b7408bd0ee8cce183f",
     "scripts/vue-tsc.mjs": "5c3fe9ba1f0e824dda0fc987836bcdf47401fe6cbce39012e2935d1e7437fd68",
-    "README.md": "0fceb02de161f5a5c223f6dc7a28dde566cfbfc5cc8523363482887b826f1a14",
+    "README.md": "4260532ce63030f46bc447e134feb364cbc9564760ea1b2b19b4a341a306dd50",
     "DESIGN.md": "a01a5d9e32f19a82b4e31d721496202024bc830eae63ff6b65776bee7f316bb0",
     "MIGRATION-5.0.md": "6f5b0dfb74d09574ec1400531d24e4ff5d8b5b818b53e515630fdca8df8f9fff",
     "licenses/PrimeVue.txt": "0aa69c559104023e51ce6244bb9f4f605b6dad819af8fb1b317d8d853db98761",
