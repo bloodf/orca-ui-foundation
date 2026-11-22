@@ -9,7 +9,7 @@ for (const [name, path] of Object.entries({ PrimeVue: 'primevue/LICENSE.md', Pri
 }
 const components = (await readdir(resolve(root, 'src/components'))).filter(name => /\.(vue|ts)$/.test(name)).sort().map(name => 'src/components/' + name);
 const spoolArt = (await readdir(resolve(root, 'src/assets/spool'))).filter(name => name.endsWith('.webp')).sort().map(name => 'src/assets/spool/' + name);
-const files = ['src/index.ts', 'src/license.ts', 'src/theme.ts', 'src/palette.json', 'src/base.css', 'src/fonts/Manrope.woff2', 'src/icons.ts', ...components, ...spoolArt,
+const files = ['src/index.ts', 'src/license.ts', 'src/theme.ts', 'src/palette.json', 'src/base.css', 'src/fonts/Manrope.woff2', 'src/icons.ts', ...components, ...spoolArt, 'python/filmatch.py',
   'package.json', 'package-lock.json', 'scripts/check.mjs', 'scripts/vue-tsc.mjs',
   'README.md', 'DESIGN.md', 'MIGRATION-5.0.md', 'licenses/PrimeVue.txt', 'licenses/PrimeUIX.txt', 'licenses/Vue.txt', 'licenses/Lucide.txt', 'licenses/Manrope.txt'];
 const hashes = {};

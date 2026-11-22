@@ -31,6 +31,8 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.7.0 adds `python/filmatch.py`, the filament matching that Spooler, U1 Control and Kobra Control share: colour distance, material names, OrcaFilamentLibrary generic ids, Spooler's parent-preset choice and U1 Control's toolhead preset choice. It is plain Python (standard library only, no `orca` import) and ships in the package; each of those plugins' builds copies `node_modules/@orca-plugins/ui-foundation/python/filmatch.py` into its own Python package and a test checks the committed copy. Its tests (`python/tests`) run in `npm run check`; `python/generic_ids.py` refreshes the pinned OrcaSlicer ids. Nothing in the Vue sources changes.
+
 Version 5.6.2 fixes bugs found in a second review. It is a drop-in update.
 
 - The file browser's folder tree can always be reached with Tab, also after the open folder is renamed, moved or deleted, or when no folder is open.
