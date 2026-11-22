@@ -259,5 +259,102 @@ class OfdTest(unittest.TestCase):
         self.assertEqual(fm.rank_ofd(profiles, "Bambu", "Nylon")[0]["material"], "PA6")
 
 
+class OfdInstallTest(unittest.TestCase):
+    def setUp(self):
+        with open(os.path.join(HERE, "fixtures", "ofd_presets", "sample.json"), encoding="utf-8") as f:
+            self.items = json.load(f)["presets"]
+        self.profile, self.preset = self.items[0]["profile"], self.items[0]["preset"]
+        self.dir = tempfile.mkdtemp()
+        self.calls = []
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def get(self, preset):
+        def get(url, headers):
+            self.calls.append(url)
+            return 200, json.dumps(preset).encode("utf-8"), {}
+        return get
+
+    def test_checks(self):
+        for item in self.items:
+            self.assertEqual(fm.ofd_problem(item["preset"], item["profile"]), "")
+        p, prof = self.preset, self.profile
+        self.assertIn("parent", fm.ofd_problem(p, prof, parents={"Generic PETG @System"}))
+        self.assertEqual(fm.ofd_problem(p, prof, parents={p["inherits"]}), "")
+        self.assertIn("unknown setting", fm.ofd_problem({**p, "post_process": ["rm -rf /"]}, prof))
+        self.assertIn("not a number", fm.ofd_problem({**p, "nozzle_temperature": ["inf"]}, prof))
+        self.assertIn("not a number", fm.ofd_problem({**p, "nozzle_temperature": ["nan"]}, prof))
+        self.assertIn("not a list", fm.ofd_problem({**p, "nozzle_temperature": 210}, prof))
+        self.assertIn("name", fm.ofd_problem({**p, "name": "Generic PLA"}, {**prof, "profile_name": "Generic PLA"}))
+        self.assertIn("name", fm.ofd_problem({**p, "name": "a/b (OFD)"}, {**prof, "profile_name": "a/b (OFD)"}))
+        self.assertIn("parent", fm.ofd_problem({**p, "inherits": "Other"}, prof))
+        self.assertEqual(fm.ofd_problem([], prof), "not a preset")
+
+    def test_fetched_once_then_kept(self):
+        preset, problem = fm.ofd_preset(self.dir, self.profile, get=self.get(self.preset))
+        self.assertEqual((problem, preset["name"]), ("", self.profile["profile_name"]))
+        self.assertEqual(self.calls, [fm.OFD_BASE + self.profile["path"]])
+        self.assertEqual(fm.ofd_preset(self.dir, self.profile, offline=True, get=self.get(self.preset))[1], "")
+        self.assertEqual(len(self.calls), 1)
+        bad = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, bad, True)
+        self.assertEqual(fm.ofd_preset(bad, self.profile, offline=True), (None, "not fetched yet"))
+        self.assertIn("unknown setting", fm.ofd_preset(bad, self.profile, get=self.get({**self.preset, "x": ["1"]}))[1])
+        self.assertFalse(os.path.exists(os.path.join(bad, fm.OFD_PRESETS)))   # a refused preset is not kept
+
+    def test_flatten(self):
+        parent = {"nozzle_temperature": "200,200", "filament_flow_ratio": "0.98,0.98", "filament_id": "OFDSrzZ8",
+                  "inherits": "", "compatible_printers": "", "filament_settings_id": "\"Generic PLA @System\"", "name": "Generic PLA @System"}
+        fid = fm.own_filament_id("UOD", self.profile["id"])
+        self.assertTrue(fid.startswith("UOD") and len(fid) == 13)
+        self.assertEqual(fid, fm.own_filament_id("UOD", self.profile["id"]))
+        flat = fm.flatten_ofd(self.preset, parent, fid, "_local/x/" + self.preset["name"])
+        self.assertEqual((flat["inherits"], flat["filament_id"], flat["compatible_printers"]), ("", fid, []))
+        self.assertEqual(flat["nozzle_temperature"], [self.preset["nozzle_temperature"][0]] * 2)   # one per nozzle variant
+        self.assertEqual(flat["filament_flow_ratio"], "0.98,0.98")   # the parent's, as OrcaSlicer wrote it
+        self.assertEqual(flat["filament_settings_id"], ["_local/x/" + self.preset["name"]])
+        self.assertNotIn("is_custom_defined", flat)
+
+    def test_safe_preset_name(self):
+        self.assertEqual(fm.safe_preset_name("Polymaker Panchroma (OFD)"), "Polymaker Panchroma (OFD)")
+        self.assertEqual(fm.safe_preset_name('a/b\\c:d*?"<>|;@e (OFD)'), "a b c d e (OFD)")
+        self.assertEqual(fm.safe_preset_name("Confetti PLA (OFD)"), "C\u200bonfetti PLA (OFD)")
+        self.assertEqual(fm.safe_preset_name("CON"), "_CON")
+        self.assertEqual(len(fm.safe_preset_name("x" * 300)), 100)
+
+    def test_install_bundle(self):
+        root = self.dir
+        os.makedirs(os.path.join(root, "user", "123", "filament"))
+        mine = os.path.join(root, "user", "123", "filament", "Mine.json")
+        with open(mine, "w", encoding="utf-8") as f:
+            f.write("{}")
+        self.assertEqual(fm.user_folders(root, [mine]), ["123"])
+        self.assertEqual(fm.user_folders(root, ["/elsewhere/x.json"]), ["123", "default"])
+        reloads = []
+
+        def reload(bundle):
+            reloads.append(bundle)
+            if len(reloads) == 1:
+                raise RuntimeError("bundle folder does not exist for this user")
+        folder = fm.install_bundle(root, ["999", "123"], "u1control_ofd", "U1 Control (OFD)", "1.0", {"A (OFD).json": {"name": "A (OFD)"}}, reload)
+        self.assertEqual(folder, "123")
+        bundle = os.path.join(root, "user", "123", "_local", "u1control_ofd")
+        self.assertTrue(os.path.exists(os.path.join(bundle, "filament", "A (OFD).json")))
+        self.assertFalse(os.path.exists(os.path.join(root, "user", "999", "_local", "u1control_ofd", "filament", "A (OFD).json")))
+        with open(mine, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "{}")   # the user's own preset untouched
+
+        def refuse(bundle):
+            raise RuntimeError("OrcaSlicer refused the bundle")
+        with self.assertRaises(RuntimeError):
+            fm.install_bundle(root, ["123"], "u1control_ofd", "U1 Control (OFD)", "1.0",
+                              {"A (OFD).json": {"name": "changed"}, "B (OFD).json": {"name": "B"}}, refuse)
+        with open(os.path.join(bundle, "filament", "A (OFD).json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"name": "A (OFD)"})   # put back as it was
+        self.assertFalse(os.path.exists(os.path.join(bundle, "filament", "B (OFD).json")))
+
+
 if __name__ == "__main__":
     unittest.main()
