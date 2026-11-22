@@ -31,6 +31,12 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.10.0 adds installing an Open Filament Database preset to `python/filmatch.py`. It is a drop-in update.
+
+- `ofd_preset(folder, profile)` fetches one OFD preset once into `folder/presets/<id>.json` and checks it (`ofd_problem`): its name and parent as the index gives them, only settings a filament preset takes (`OFD_VALUE_KEYS`; anything else is refused), every value a list of text, numbers finite, and, when given, a parent OrcaSlicer has. A refused preset is not kept.
+- `flatten_ofd(preset, parent_config, filament_id)` makes a standalone preset: the parent's settings, OFD's values over them, `inherits` empty and a `filament_id` of the plugin's own (`own_filament_id`), so OrcaSlicer's sync from AMS loads it and not the generic parent. `ofd_values` gives OFD's values alone, for a plugin that layers them into its own presets (Spooler).
+- `install_bundle(root, folders, bundle_id, …)` writes presets into a plugin's own local bundle in the first account folder OrcaSlicer takes (`user_folders`), next to the presets it holds, and reloads it; every file it replaces is kept first and put back when OrcaSlicer refuses the bundle. `safe_preset_name` keeps a preset name a safe file name (no words OrcaSlicer blocks in plugin paths).
+
 Version 5.9.1: `python/filmatch.py` passes ruff's E713 (`not in`), which the plugins lint their copy with. Nothing else changes.
 
 Version 5.9.0 adds read-only proposals from the [Open Filament Database](https://openfilamentdatabase.org) (OFD, data under the MIT licence, © OpenFilamentCollective) to `python/filmatch.py`. It is a drop-in update.

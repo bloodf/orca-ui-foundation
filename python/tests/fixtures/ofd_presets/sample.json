@@ -1,0 +1,142 @@
+{
+ "_note": "Two presets from https://api.openfilamentdatabase.org/orcaslicer/ (Open Filament Database, (c) OpenFilamentCollective, MIT licence), for tests only.",
+ "presets": [
+  {
+   "profile": {
+    "id": "35186dc5-3d32-5a59-bc06-980e87139563",
+    "brand": "Professional LAB",
+    "brand_slug": "professional_lab",
+    "material": "PLA",
+    "filament": "PLA",
+    "filament_slug": "pla",
+    "profile_name": "Professional LAB PLA (OFD)",
+    "inherits": "Generic PLA @System",
+    "orca_filament_code": null,
+    "path": "brands/professional_lab/materials/PLA/filaments/pla.json",
+    "source": "https://api.openfilamentdatabase.org/api/v1/brands/professional_lab/materials/PLA/filaments/pla/index.json"
+   },
+   "preset": {
+    "eng_plate_temp": [
+     "60"
+    ],
+    "eng_plate_temp_initial_layer": [
+     "60"
+    ],
+    "filament_density": [
+     "1.25"
+    ],
+    "filament_diameter": [
+     "1.75"
+    ],
+    "filament_notes": [
+     "Generated from the Open Filament Database.\n\nTemperatures, density, diameter and any recorded volumetric speed and\nfan speeds come from OFD. Everything else - flow, retraction and\npressure advance - is inherited from 'Generic PLA @System' and is not tuned for\nthis filament.\n\nSource: https://api.openfilamentdatabase.org/api/v1/brands/professional_lab/materials/PLA/filaments/pla/index.json\nDataset version: 2026.11.22"
+    ],
+    "filament_settings_id": [
+     "Professional LAB PLA (OFD)"
+    ],
+    "filament_type": [
+     "PLA"
+    ],
+    "filament_vendor": [
+     "Professional LAB"
+    ],
+    "from": "User",
+    "hot_plate_temp": [
+     "60"
+    ],
+    "hot_plate_temp_initial_layer": [
+     "60"
+    ],
+    "inherits": "Generic PLA @System",
+    "is_custom_defined": "0",
+    "name": "Professional LAB PLA (OFD)",
+    "nozzle_temperature": [
+     "210"
+    ],
+    "nozzle_temperature_initial_layer": [
+     "210"
+    ],
+    "textured_plate_temp": [
+     "60"
+    ],
+    "textured_plate_temp_initial_layer": [
+     "60"
+    ],
+    "version": "2.0.2.0"
+   }
+  },
+  {
+   "profile": {
+    "id": "1675f0f2-85a9-5232-8371-5b227e84fec6",
+    "brand": "Bambu Lab",
+    "brand_slug": "bambu_lab",
+    "material": "TPU",
+    "filament": "TPU 95A HF",
+    "filament_slug": "95a_hf",
+    "profile_name": "Bambu Lab TPU 95A HF (OFD)",
+    "inherits": "Generic TPU @System",
+    "orca_filament_code": "OFvKUnLh",
+    "path": "brands/bambu_lab/materials/TPU/filaments/95a_hf.json",
+    "source": "https://api.openfilamentdatabase.org/api/v1/brands/bambu_lab/materials/TPU/filaments/95a_hf/index.json"
+   },
+   "preset": {
+    "eng_plate_temp": [
+     "30"
+    ],
+    "eng_plate_temp_initial_layer": [
+     "30"
+    ],
+    "fan_max_speed": [
+     "100"
+    ],
+    "fan_min_speed": [
+     "100"
+    ],
+    "filament_density": [
+     "1.22"
+    ],
+    "filament_diameter": [
+     "1.75"
+    ],
+    "filament_max_volumetric_speed": [
+     "12"
+    ],
+    "filament_notes": [
+     "Generated from the Open Filament Database.\n\nTemperatures, density, diameter and any recorded volumetric speed and\nfan speeds come from OFD. Everything else - flow, retraction and\npressure advance - is inherited from 'Generic TPU @System' and is not tuned for\nthis filament.\n\nSource: https://api.openfilamentdatabase.org/api/v1/brands/bambu_lab/materials/TPU/filaments/95a_hf/index.json\nDataset version: 2026.11.22\nOrcaSlicer filament code: OFvKUnLh"
+    ],
+    "filament_settings_id": [
+     "Bambu Lab TPU 95A HF (OFD)"
+    ],
+    "filament_type": [
+     "TPU"
+    ],
+    "filament_vendor": [
+     "Bambu Lab"
+    ],
+    "from": "User",
+    "hot_plate_temp": [
+     "30"
+    ],
+    "hot_plate_temp_initial_layer": [
+     "30"
+    ],
+    "inherits": "Generic TPU @System",
+    "is_custom_defined": "0",
+    "name": "Bambu Lab TPU 95A HF (OFD)",
+    "nozzle_temperature": [
+     "230"
+    ],
+    "nozzle_temperature_initial_layer": [
+     "230"
+    ],
+    "textured_plate_temp": [
+     "30"
+    ],
+    "textured_plate_temp_initial_layer": [
+     "30"
+    ],
+    "version": "2.0.2.0"
+   }
+  }
+ ]
+}
