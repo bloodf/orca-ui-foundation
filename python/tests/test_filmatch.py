@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -118,6 +119,80 @@ class PickTest(unittest.TestCase):
         colours = {"Generic PLA Red @U1": "#FF0000", "Generic PLA Blu @U1": "#0000FF"}
         self.assertEqual(pick(twins, {**head, "colour": "#0011EE"}, colours=colours), "Generic PLA Blu @U1")
         self.assertEqual(pick(twins, head, colours=colours), "Generic PLA Blu @U1")   # no colour: shorter, then name
+
+
+class RankTest(unittest.TestCase):
+    def test_rank_parents_reasons(self):
+        ranked = fm.rank_parents({"name": "SnapSpeed Yellow", "material": "PLA", "vendor": {"name": "Snapmaker"}}, U1,
+                                 ParentTest.PARENTS, 3)
+        self.assertEqual(ranked[0]["name"], "Snapmaker PLA SnapSpeed @U1")
+        self.assertEqual(ranked[0]["reasons"], [["material", "PLA"], ["vendor", "Snapmaker"], ["word", "snapspeed"], ["printer", ""]])
+        self.assertEqual(ranked[0]["score"], fm.parent_score(ParentTest.PARENTS[3], {"name": "SnapSpeed Yellow", "material": "PLA",
+                                                                                    "vendor": {"name": "Snapmaker"}}, U1))
+        self.assertEqual(len(ranked), 3)
+        self.assertNotIn("Other PLA @X1C", [r["name"] for r in fm.rank_parents({"material": "PLA"}, U1, ParentTest.PARENTS)])
+        self.assertIn(["extra_word", "silk"], next(r for r in fm.rank_parents({"material": "PLA"}, U1, ParentTest.PARENTS)
+                                                   if r["name"] == "Generic PLA Silk @System")["reasons"])
+
+    def test_rank_presets_reasons_and_confidence(self):
+        head = {"type": "PLA", "vendor": "Polymaker", "sub_type": "Matte"}
+        ranked = fm.rank_filament_presets(PickTest.NAMES, head)
+        self.assertEqual(ranked[0]["name"], fm.pick_filament_preset(PickTest.NAMES, head))
+        self.assertEqual(ranked[0]["reasons"], [["material", "PLA"], ["vendor", "Polymaker"], ["printer", ""]])
+        bbl = next(r for r in ranked if r["name"] == "Generic PLA @BBL X1C")
+        self.assertIn(["other_printer", ""], bbl["reasons"])
+        self.assertNotIn("Generic PETG @U1", [r["name"] for r in ranked])
+        self.assertTrue(fm.confident(ranked, fm.PRESET_MARGIN))
+        self.assertFalse(fm.confident([{"score": 30}, {"score": 25}], fm.PRESET_MARGIN))
+        self.assertTrue(fm.confident([{"score": 1}], fm.PRESET_MARGIN))
+        self.assertFalse(fm.confident([], fm.PRESET_MARGIN))
+
+
+class MatchesTest(unittest.TestCase):
+    def test_keys(self):
+        self.assertEqual(fm.observation_keys(12, "AA BB", "S1", "Polymaker", "PLA", "Matte"),
+                         ["spool:12", "tag:aa bb", "sku:s1", "mat:polymaker|pla|matte", "mat:polymaker|pla|"])
+        self.assertEqual(fm.observation_keys(material="PETG"), ["mat:|petg|"])
+        self.assertEqual(fm.observation_keys(), [])
+        self.assertEqual(fm.toolhead_keys({"type": "PLA", "vendor": "Generic"}, {"uid": "X1", "manufacturer": "eSUN"}, 3),
+                         ["spool:3", "tag:x1", "mat:esun|pla|"])
+
+    def test_overrides_migrate_to_the_same_picks(self):
+        overrides = {"UID:AABB": "Generic PETG @U1", "SKU:S1": "Generic PLA Silk @U1", "polymaker|pla|": "Snapmaker PLA Matte @U1",
+                     "junk": "x", "uid:": "y", "sku:s2": ""}
+        self.assertEqual(fm.overrides_as_matches(overrides), {"tag:aabb": "Generic PETG @U1", "sku:s1": "Generic PLA Silk @U1",
+                                                              "mat:polymaker|pla|": "Snapmaker PLA Matte @U1"})
+        store = {"version": 1, "entries": {k: {"default": v} for k, v in fm.overrides_as_matches(overrides).items()}}
+        head = {"type": "PLA", "vendor": "Generic"}
+        for tag in ({"vendor": "Polymaker", "type": "PLA", "sku": "S1", "uid": "AABB"}, {"vendor": "Polymaker", "type": "PLA", "sku": "S1"},
+                    {"vendor": "Polymaker", "type": "PLA"}, {"vendor": "eSUN", "type": "PLA"}):
+            old = fm.override_name(PickTest.NAMES, head, tag, overrides)
+            new = next((n for n in fm.recall([store], fm.toolhead_keys(head, tag)) if n in PickTest.NAMES), "")
+            self.assertEqual(new, old, tag)
+
+    def test_store_round_trip(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "sub", fm.MATCHES_FILE)
+            self.assertEqual(fm.load_matches(path), {"version": 1, "entries": {}})
+            fm.remember(path, {"spool:1": "A"}, now=5)
+            fm.remember(path, {"spool:1": "B"}, "U1", now=6)
+            fm.remember(path, {"tag:x": "C"}, "U1")
+            self.assertEqual(fm.load_matches(path)["entries"]["spool:1"], {"default": "A", "printers": {"U1": "B"}, "updated": 6})
+            self.assertEqual(fm.recall([fm.load_matches(path)], ["spool:1"], "U1"), ["B", "A"])
+            self.assertEqual(fm.recall([fm.load_matches(path)], ["spool:1"], "Kobra"), ["A"])
+            other = {"version": 1, "entries": {"spool:1": {"printers": {"U1": "Z"}}}}
+            self.assertEqual(fm.recall([other, fm.load_matches(path)], ["tag:x", "spool:1"], "U1"), ["C", "Z", "B", "A"])
+            fm.remember(path, {"spool:1": ""}, "U1")
+            fm.remember(path, {"spool:1": ""})
+            self.assertNotIn("spool:1", fm.load_matches(path)["entries"])
+            self.assertEqual([n for n in os.listdir(os.path.dirname(path)) if n != fm.MATCHES_FILE], [])
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("{broken")
+            self.assertEqual(fm.load_matches(path)["entries"], {})
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"version": 2, "entries": {"a": {}}}, f)
+            self.assertEqual(fm.load_matches(path)["entries"], {})
+            self.assertEqual(fm.recall([None, {"entries": {"k": "bad"}}], ["k"]), [])
 
 
 if __name__ == "__main__":

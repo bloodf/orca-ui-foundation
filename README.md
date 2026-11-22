@@ -31,6 +31,11 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.8.0 adds remembered filament matches and the shared preset picker. It is a drop-in update.
+
+- `python/filmatch.py` ranks candidates with the reasons for each score (`rank_parents`, `rank_filament_presets`, `confident`; reasons are `[code, value]` pairs for the page to word) and keeps the matches the user confirmed in `matches.json` (`observation_keys`, `toolhead_keys`, `recall`, `remember`, `load_matches`, and `overrides_as_matches` for U1 Control's old `profile_overrides`). The picks of `best_parent` and `pick_filament_preset` do not change.
+- `OuiPresetMatch` shows the preset a spool or slot is matched to, its score as a state chip, the reasons, and Change, which lists the other candidates in place.
+
 Version 5.7.0 adds `python/filmatch.py`, the filament matching that Spooler, U1 Control and Kobra Control share: colour distance, material names, OrcaFilamentLibrary generic ids, Spooler's parent-preset choice and U1 Control's toolhead preset choice. It is plain Python (standard library only, no `orca` import) and ships in the package; each of those plugins' builds copies `node_modules/@orca-plugins/ui-foundation/python/filmatch.py` into its own Python package and a test checks the committed copy. Its tests (`python/tests`) run in `npm run check`; `python/generic_ids.py` refreshes the pinned OrcaSlicer ids. Nothing in the Vue sources changes.
 
 Version 5.6.2 fixes bugs found in a second review. It is a drop-in update.
