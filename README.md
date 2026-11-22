@@ -31,6 +31,8 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.9.1: `python/filmatch.py` passes ruff's E713 (`not in`), which the plugins lint their copy with. Nothing else changes.
+
 Version 5.9.0 adds read-only proposals from the [Open Filament Database](https://openfilamentdatabase.org) (OFD, data under the MIT licence, © OpenFilamentCollective) to `python/filmatch.py`. It is a drop-in update.
 
 - `ofd_index(folder)` fetches OFD's OrcaSlicer index (`https://api.openfilamentdatabase.org/orcaslicer/index.json`) into `folder/index.json`, keeps it for a day, asks again with `If-None-Match` / `If-Modified-Since`, and keeps using the last good index when the network fails or the answer is not an index. A plugin calls it only while its user has turned OFD on, from a worker thread. `ofd_profiles` checks every entry (relative `.json` path, every field text).
