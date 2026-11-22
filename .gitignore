@@ -5,3 +5,4 @@ dist/
 evidence/
 evidence-*/
 assets/generated/
+__pycache__/
