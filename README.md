@@ -31,6 +31,11 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.9.0 adds read-only proposals from the [Open Filament Database](https://openfilamentdatabase.org) (OFD, data under the MIT licence, © OpenFilamentCollective) to `python/filmatch.py`. It is a drop-in update.
+
+- `ofd_index(folder)` fetches OFD's OrcaSlicer index (`https://api.openfilamentdatabase.org/orcaslicer/index.json`) into `folder/index.json`, keeps it for a day, asks again with `If-None-Match` / `If-Modified-Since`, and keeps using the last good index when the network fails or the answer is not an index. A plugin calls it only while its user has turned OFD on, from a worker thread. `ofd_profiles` checks every entry (relative `.json` path, every field text).
+- `rank_ofd(profiles, vendor, material, name)` proposes OFD presets of the same manufacturer and material, scored with the same reason codes as the other rankings. Without a manufacturer it proposes nothing.
+
 Version 5.8.0 adds remembered filament matches and the shared preset picker. It is a drop-in update.
 
 - `python/filmatch.py` ranks candidates with the reasons for each score (`rank_parents`, `rank_filament_presets`, `confident`; reasons are `[code, value]` pairs for the page to word) and keeps the matches the user confirmed in `matches.json` (`observation_keys`, `toolhead_keys`, `recall`, `remember`, `load_matches`, and `overrides_as_matches` for U1 Control's old `profile_overrides`). The picks of `best_parent` and `pick_filament_preset` do not change.

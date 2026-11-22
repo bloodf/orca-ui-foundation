@@ -195,5 +195,69 @@ class MatchesTest(unittest.TestCase):
             self.assertEqual(fm.recall([None, {"entries": {"k": "bad"}}], ["k"]), [])
 
 
+class OfdTest(unittest.TestCase):
+    INDEX = os.path.join(HERE, "fixtures", "ofd_index.json")
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        with open(self.INDEX, "rb") as f:
+            self.body = f.read()
+        self.calls = []
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def get(self, status=200, fail=None):
+        def get(url, headers):
+            self.calls.append((url, dict(headers)))
+            if fail:
+                raise fail
+            return status, (self.body if status == 200 else b""), {"ETag": 'W/"abc"', "Last-Modified": "Sun, 22 Nov 2026 02:11:23 GMT"}
+        return get
+
+    def test_profiles_are_checked(self):
+        with open(self.INDEX, encoding="utf-8") as f:
+            doc = json.load(f)
+        profiles = fm.ofd_profiles(doc)
+        self.assertEqual(len(profiles), len(doc["profiles"]) - 2)   # the ".." path and the entry without fields
+        self.assertEqual(fm.ofd_profiles({**doc, "preset_version": "3.0"}), [])
+        self.assertEqual(fm.ofd_profiles([]), [])
+
+    def test_fetch_cache_and_offline(self):
+        first = fm.ofd_index(self.dir, now=1000, get=self.get())
+        self.assertEqual((first["fetched"], first["stale"], first["error"]), (1000, False, ""))
+        self.assertEqual(first["version"], "2026.11.22")
+        self.assertEqual(self.calls, [(fm.OFD_BASE + fm.OFD_INDEX, {})])
+        self.assertEqual(len(fm.ofd_index(self.dir, now=2000, get=self.get())["profiles"]), len(first["profiles"]))
+        self.assertEqual(len(self.calls), 1)   # within a day: no request
+        later = fm.ofd_index(self.dir, now=1000 + fm.OFD_TTL, get=self.get(304))
+        self.assertEqual(self.calls[-1][1], {"If-None-Match": 'W/"abc"', "If-Modified-Since": "Sun, 22 Nov 2026 02:11:23 GMT"})
+        self.assertEqual((later["fetched"], later["stale"]), (1000 + fm.OFD_TTL, False))
+        offline = fm.ofd_index(self.dir, now=5 * fm.OFD_TTL, get=self.get(fail=OSError("no network")))
+        self.assertEqual((offline["stale"], offline["error"], len(offline["profiles"])), (True, "no network", len(first["profiles"])))
+        self.body = b"<html>not json</html>"
+        broken = fm.ofd_index(self.dir, force=True, now=6 * fm.OFD_TTL, get=self.get())
+        self.assertTrue(broken["error"])
+        self.assertEqual(len(broken["profiles"]), len(first["profiles"]))   # the last good index stays
+        calls = len(self.calls)
+        self.assertEqual(len(fm.ofd_index(self.dir, now=9 * fm.OFD_TTL, get=self.get(), offline=True)["profiles"]), len(first["profiles"]))
+        self.assertEqual(len(self.calls), calls)
+        empty = fm.ofd_index(tempfile.mkdtemp(), now=1, get=self.get(fail=OSError("no network")))
+        self.assertEqual((empty["profiles"], empty["fetched"], empty["stale"]), ([], 0, False))
+
+    def test_rank(self):
+        profiles = fm.ofd_index(self.dir, now=1, get=self.get())["profiles"]
+        ranked = fm.rank_ofd(profiles, "Polymaker", "PLA", "Panchroma Matte Red")
+        self.assertEqual(ranked[0]["name"], "Polymaker Dual Panchroma Matte PLA (OFD)")
+        self.assertEqual(ranked[0]["reasons"], [["material", "PLA"], ["vendor", "Polymaker"], ["word", "matte"], ["word", "panchroma"]])
+        self.assertTrue(all(r["source"] == "ofd" and r["path"].endswith(".json") for r in ranked))
+        self.assertLessEqual(len(ranked), 5)
+        self.assertEqual({r["brand"] for r in fm.rank_ofd(profiles, "eSUN", "PLA+", limit=0)}, {"eSUN 3D"})
+        self.assertEqual(fm.rank_ofd(profiles, "Polymaker", "TPU"), [])
+        self.assertEqual(fm.rank_ofd(profiles, "", "PLA"), [])   # no manufacturer: nothing to propose
+        self.assertEqual(fm.rank_ofd(profiles, "Bambu", "Nylon")[0]["material"], "PA6")
+
+
 if __name__ == "__main__":
     unittest.main()
