@@ -5,7 +5,7 @@ import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import ProgressBar from 'primevue/progressbar';
 import Select from 'primevue/select';
-import { OuiAppBar, OuiBanner, OuiConfirm, OuiEmpty, OuiIcon, OuiLevel, OuiPanel, OuiReadout, OuiSlot, OuiSpark, OuiSpool, OuiStatus, OuiSwatch, OuiThumb, type OuiState, type OuiTone } from '../../src/components';
+import { OuiAppBar, OuiBanner, OuiConfirm, OuiEmpty, OuiIcon, OuiLevel, OuiPanel, OuiPresetMatch, OuiReadout, OuiSlot, OuiSpark, OuiSpool, OuiStatus, OuiSwatch, OuiThumb, type OuiState, type OuiTone } from '../../src/components';
 import { palette } from '../../src';
 import * as I from '../../src/icons';
 import { param, t } from '../i18n';
@@ -36,6 +36,7 @@ const states: [OuiState, string][] = [['ok', t('Connected', 'Conectada')], ['bus
   ['stale', t('Read 5 min ago', 'Lido há 5 min')], ['warn', t('Low', 'Baixo')], ['error', t('Failed', 'Falhou')], ['offline', t('Offline', 'Sem conexão')], ['idle', t('Idle', 'Parada')]];
 const type: [string, string, string][] = [['--oui-text-3xl', '40 / 600', '37 %'], ['--oui-text-2xl', '28 / 600', 'R$ 92.10'], ['--oui-text-xl', '20 / 600', '219.6 °C'],
   ['--oui-text-lg', '15 / 650', 'desk_organiser_plate_1.gcode'], ['--oui-text-md', '13 / 400', t('Body and controls', 'Texto e controles')], ['--oui-text-sm', '12 / 400', t('Secondary line', 'Linha secundária')]];
+const matchLabels = { change: t('Change', 'Trocar'), none: t('No preset', 'Nenhum preset'), score: t('Score {n}', 'Nota {n}'), auto: t('Automatic', 'Automático'), autoHint: t('Forget the choice made by hand', 'Esquecer a escolha manual') };
 const icons = Object.entries(I) as [string, I.OuiIconData][];
 const ART: [string, string, string, string][] = [
   ['Kobra Control', artKobra, t('Connect your Kobra X', 'Conecte sua Kobra X'), t('Enter its address in Settings to see the print here.', 'Informe o endereço nos Ajustes para ver a impressão aqui.')],
@@ -208,6 +209,16 @@ const wide = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.
           <OuiSlot label="A3" name="PLA+ - Burnt Orange" material="PLA · AMS" color="#d9692a" :empty-label="t('Empty', 'Vazio')"><template #amount /></OuiSlot>
           <OuiSlot label="A4" :empty-label="t('Empty', 'Vazio')"><template #amount><p>never shown</p></template></OuiSlot>
           <OuiSlot label="T2" :tool="2" name="PETG - Blue" material="PETG" color="#2850a8" :empty-label="t('Empty', 'Vazio')" :unknown-label="t('Weight unknown', 'Peso desconhecido')" />
+        </div>
+      </OuiPanel>
+
+      <OuiPanel :title="t('Preset match', 'Preset escolhido')" :icon="I.spool" tone="magenta" :meta="t('clear pick · close call, open', 'escolha clara · escolha apertada, aberta')">
+        <div class="oui-cards" style="--oui-cards-4: 9999px">
+          <OuiPresetMatch name="Polymaker PLA Matte @U1" :score="49" confident :reasons="[t('PLA', 'PLA'), t('vendor Polymaker', 'fabricante Polymaker'), t('matte', 'matte'), t('made for this printer', 'feito para esta impressora')]"
+            :candidates="[]" :labels="matchLabels" />
+          <OuiPresetMatch name="Generic PLA @U1" :score="35" :reasons="[t('PLA', 'PLA'), t('Generic', 'Genérico'), t('made for this printer', 'feito para esta impressora')]" remembered :badge="t('Remembered', 'Lembrado')"
+            :candidates="[{ name: 'Generic PLA @U1', score: 35, reasons: [t('Generic', 'Genérico')] }, { name: 'Generic PLA Silk @U1', score: 29, reasons: [t('silk: not on the spool', 'silk: não está na bobina')] },
+                          { name: 'Polymaker PLA (OFD)', badge: t('OFD, untuned', 'OFD, sem ajuste'), note: t('Open Filament Database', 'Open Filament Database') }]" :labels="matchLabels" />
         </div>
       </OuiPanel>
 

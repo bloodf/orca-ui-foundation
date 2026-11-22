@@ -20,6 +20,7 @@ export { default as OuiMenu, type OuiMenuItem } from './OuiMenu.vue';
 export { default as OuiLevel } from './OuiLevel.vue';
 export { default as OuiPageHeader } from './OuiPageHeader.vue';
 export { default as OuiPanel } from './OuiPanel.vue';
+export { default as OuiPresetMatch, type OuiPresetCandidate, type OuiPresetMatchLabels } from './OuiPresetMatch.vue';
 export { default as OuiReadout } from './OuiReadout.vue';
 export { default as OuiRequirement } from './OuiRequirement.vue';
 export { default as OuiSetpoint } from './OuiSetpoint.vue';
