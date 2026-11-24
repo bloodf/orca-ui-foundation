@@ -15,7 +15,7 @@ const running = computed(() => props.state === 'running');
 const done = computed(() => props.state === 'done');
 const spacing = ref(2); const rotation = ref('auto'); const copies = ref<number | null>(null);
 const file = 'Desk organizer-arranged-20261111-195500-1f3ffe.3mf';
-const path = '/Users/someone/Library/Application Support/OrcaSlicer/plugins/storage/' + file;
+const path = '/example/user/Library/Application Support/OrcaSlicer/plugins/storage/' + file;
 </script>
 
 <template>
