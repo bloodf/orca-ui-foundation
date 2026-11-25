@@ -31,7 +31,7 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
-Version 5.11.0 makes long lists fast: `longList(count, itemSize)` gives a PrimeVue Select only the rows in view once it has more than `LONG_LIST` (50) options, and `fuzzyFilter` folds each name once instead of on every keystroke. It is a drop-in update; 5.10.1 updated the Lucide icons and 5.10.0 added installing an Open Filament Database preset to `python/filmatch.py`.
+Version 5.12.0 makes long lists fast: `longList(count, itemSize)` gives a PrimeVue Select only the rows in view once it has more than `LONG_LIST` (50) options, and `fuzzyFilter` folds each name once instead of on every keystroke. It is a drop-in update; 5.11.0 updated the Lucide icons to lucide-static 1.80.0 and 5.10.0 added installing an Open Filament Database preset to `python/filmatch.py`.
 
 - `ofd_preset(folder, profile)` fetches one OFD preset once into `folder/presets/<id>.json` and checks it (`ofd_problem`): its name and parent as the index gives them, only settings a filament preset takes (`OFD_VALUE_KEYS`; anything else is refused), every value a list of text, numbers finite, and, when given, a parent OrcaSlicer has. A refused preset is not kept.
 - `flatten_ofd(preset, parent_config, filament_id)` makes a standalone preset: the parent's settings, OFD's values over them, `inherits` empty and a `filament_id` of the plugin's own (`own_filament_id`), so OrcaSlicer's sync from AMS loads it and not the generic parent. `ofd_values` gives OFD's values alone, for a plugin that layers them into its own presets (Spooler).
