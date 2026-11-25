@@ -10,8 +10,15 @@ export interface FuzzyMatch { score: number; hits: number[] }
 const SEPARATOR = /[\s_\-.]/;
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
-/** The name folded and without separators: its characters, where each came from, and which start a word. */
-function prepare(name: string) {
+interface Prepared { folded: string; text: string; from: number[]; starts: boolean[] }
+// A search box asks about the same names on every keystroke: each name is folded once, not once per letter typed.
+// ponytail: the whole cache is dropped at 20 000 names instead of evicting the oldest; an LRU if lists ever get that long.
+const prepared = new Map<string, Prepared>();
+
+/** The name folded, and folded without separators: its characters, where each came from, and which start a word. */
+function prepare(name: string): Prepared {
+  const known = prepared.get(name);
+  if (known) return known;
   let text = ''; const from: number[] = []; const starts: boolean[] = [];
   let wordStart = true;
   for (let i = 0; i < name.length; i++) {
@@ -19,19 +26,22 @@ function prepare(name: string) {
     if (SEPARATOR.test(ch)) { wordStart = true; continue; }
     for (const c of fold(ch)) { text += c; from.push(i); starts.push(wordStart); wordStart = false; }
   }
-  return { text, from, starts };
+  if (prepared.size >= 20000) prepared.clear();
+  const out = { folded: fold(name), text, from, starts };
+  prepared.set(name, out);
+  return out;
 }
 
 export function fuzzyMatch(query: string, name: string): FuzzyMatch | null {
   const q = [...fold(query)].filter(c => !SEPARATOR.test(c)).join('');
   if (!q) return { score: 0, hits: [] };
-  const { text, from, starts } = prepare(name);
+  const { folded, text, from, starts } = prepare(name);
   const run = (at: number) => from.slice(at, at + q.length);
   const dot = name.lastIndexOf('.');
-  const base = dot > 0 ? prepare(name.slice(0, dot)).text : text;
+  const base = dot > 0 ? prepare(name.slice(0, dot)) : null;
   const typed = fold(query).trim();
-  if (fold(name) === typed || (dot > 0 && fold(name.slice(0, dot)) === typed)) return { score: 0, hits: run(0) };
-  if (text === q || base === q) return { score: 500, hits: run(0) };   // the same but for separators: "benchy pla" for "benchy_PLA
+  if (folded === typed || base?.folded === typed) return { score: 0, hits: run(0) };
+  if (text === q || base?.text === q) return { score: 500, hits: run(0) };   // the same but for separators: "benchy pla" for "benchy_PLA
   if (text.startsWith(q)) return { score: 1000 + text.length, hits: run(0) };
   let at = text.indexOf(q); let first = at;
   for (; at >= 0; at = text.indexOf(q, at + 1)) if (starts[at]) return { score: 2000 + at, hits: run(at) };

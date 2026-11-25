@@ -10,6 +10,7 @@ export { default as OuiEmpty } from './OuiEmpty.vue';
 export { default as OuiFileBrowser, type OuiFile, type OuiFolder, type OuiFileBrowserLabels, type OuiFolderNameError, type OuiFileOp, type OuiFileMenuItem } from './OuiFileBrowser.vue';
 export { useFileBackend, type OuiFileBackend, type OuiFileBackendOptions, type OuiFileAction } from './fileBackend';
 export { fuzzyMatch, fuzzyFilter, type FuzzyMatch } from './fuzzy';
+export { longList, LONG_LIST } from './longList';
 export { default as OuiFormRow } from './OuiFormRow.vue';
 export { default as OuiFormSection } from './OuiFormSection.vue';
 export { default as OuiHint } from './OuiHint.vue';
