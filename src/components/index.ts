@@ -28,6 +28,8 @@ export { default as OuiSetpoint } from './OuiSetpoint.vue';
 export { default as OuiSettings, type OuiSettingsSection } from './OuiSettings.vue';
 export { default as OuiSlot } from './OuiSlot.vue';
 export { default as OuiSpool } from './OuiSpool.vue';
+export { default as OuiSpoolPick, type OuiSpoolPickLabels } from './OuiSpoolPick.vue';
+export { groupByColour, colourKey, normHex, spoolColours, byRemaining, materialsOf, type OuiPickSpool, type OuiColourGroup } from './spoolPick';
 export { default as OuiStatus, type OuiState } from './OuiStatus.vue';
 export { default as OuiSwatch } from './OuiSwatch.vue';
 export { default as OuiThumb } from './OuiThumb.vue';
