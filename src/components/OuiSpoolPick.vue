@@ -40,7 +40,7 @@ const material = defineModel<string>('material', { default: '' });
 const query = ref('');
 const materials = computed(() => (props.labels.allMaterials ? materialsOf(props.spools) : []));
 const shown = computed(() => {
-  const m = material.value && materials.value.length > 1 ? material.value : '';
+  const m = materials.value.length > 1 && materials.value.includes(material.value) ? material.value : '';
   const inMaterial = m ? props.spools.filter(s => (s.material ?? '').trim() === m) : props.spools;
   const q = query.value.trim(), id = /^#?(\d+)$/.exec(q);
   if (!q) return inMaterial;
@@ -121,7 +121,7 @@ function afterHide() {
     <InputText v-if="labels.search" ref="input" v-model="query" type="search" size="small" class="oui-spick-q" :placeholder="labels.search" :aria-label="labels.search"
       data-spick="search" @keydown="searchKey" />
     <div v-if="materials.length > 1" class="oui-spick-mats" role="group" :aria-label="labels.allMaterials">
-      <button type="button" class="oui-chip oui-spick-mat" :aria-pressed="!material" @click="material = ''">{{ labels.allMaterials }}</button>
+      <button type="button" class="oui-chip oui-spick-mat" :aria-pressed="!materials.includes(material)" @click="material = ''">{{ labels.allMaterials }}</button>
       <button v-for="m in materials" :key="m" type="button" class="oui-chip oui-spick-mat" :aria-pressed="material === m" :data-material="m"
         @click="material = material === m ? '' : m">{{ m }}</button>
     </div>
@@ -135,8 +135,7 @@ function afterHide() {
       </button>
     </div>
     <p v-if="!groups.length" class="oui-meta oui-spick-empty">{{ query.trim() && labels.noMatch ? labels.noMatch : labels.empty }}</p>
-  </div>
-  <Dialog v-model:visible="visible" modal :header="labels.choose" :style="{ width: '440px', maxWidth: 'calc(100vw - 32px)' }" data-spick="dialog"
+    <Dialog v-model:visible="visible" modal :header="labels.choose" :style="{ width: '440px', maxWidth: 'calc(100vw - 32px)' }" data-spick="dialog"
     @after-hide="afterHide">
     <template v-if="open">
       <p class="oui-meta oui-spick-sub"><OuiSwatch :color="open.colour" :colors="open.colours" :size="14" />{{ groupLabel(open) }}</p>
@@ -149,7 +148,8 @@ function afterHide() {
         </button>
       </div>
     </template>
-  </Dialog>
+    </Dialog>
+  </div>
 </template>
 <style>
 .oui-spick { display: grid; gap: var(--oui-s2); min-width: 0; }
