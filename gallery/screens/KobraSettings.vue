@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Button from 'primevue/button';
+import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import ToggleSwitch from 'primevue/toggleswitch';
-import { OuiFormRow, OuiFormSection, OuiIcon, OuiKeyValue, OuiSettings, OuiStatus, OuiToastHost, useToast } from '../../src/components';
+import { OuiBanner, OuiFormRow, OuiFormSection, OuiIcon, OuiKeyValue, OuiSaveBar, OuiSettingsPages, OuiStatus, OuiToastHost, useToast } from '../../src/components';
 import { UI_VERSION } from '../../src';
 import * as I from '../../src/icons';
 import { t } from '../i18n';
 import PrinterBar from '../v5/PrinterBar.vue';
 
-// MOCK — Kobra Control settings: section tabs, one section at a time, one save bar.
-defineProps<{ state: string }>();
+// MOCK — Kobra Control settings: section tabs, one section at a time, one save bar (OuiSettingsPages, OuiSaveBar).
+// state: '' (two fields changed) | 'clean' (nothing to save: Save and Discard are off) | 'stack' (a small plugin's
+// settings: every section on one page, no list) | 'banner' (a banner over the page that leaves after a moment: the
+// save bar follows the page back down).
+const props = defineProps<{ state: string }>();
 // A toast while the save bar is up: the stack sits above the bar (OuiSettings lifts it), never under it.
 const toast = useToast();
 onMounted(() => toast.show({ tone: 'success', title: t('Certificate found.', 'Certificado encontrado.'), body: 'Anycubic Slicer Next', timeout: 0 }));
@@ -24,14 +28,20 @@ const sections = [
   { id: 'interface', label: t('Interface', 'Interface'), icon: I.languages },
   { id: 'about', label: t('About', 'Sobre'), icon: I.info },
 ];
-const name = ref('Bench Kobra'); const host = ref('192.168.1.50'); const language = ref('auto');
+const name = ref('Bench Kobra'); const host = ref('192.168.1.50'); const language = ref('auto'); const refresh = ref(30);
+// What is stored: the two fields differ from it unless state=clean.
+const stored = ref(props.state === 'clean' ? { name: name.value, host: host.value } : { name: 'Kobra', host: '192.168.1.49' });
+const changed = computed(() => [name.value !== stored.value.name && t('Printer name', 'Nome da impressora'), host.value !== stored.value.host && t('Address', 'Endereço')].filter(Boolean).join(', '));
+const waiting = ref(props.state === 'banner');
+onMounted(() => { if (waiting.value) setTimeout(() => { waiting.value = false; }, 700); });
 const leveling = ref(true); const vibration = ref(true); const camera = ref(true); const ffmpeg = ref('');
 const spoolman = ref('http://192.168.1.10:7912'); const auto = ref(true); const report = ref(true);
 </script>
 
 <template>
   <PrinterBar plugin="kobra" tab="settings" state="ok" :state-label="t('Connected', 'Conectada')" />
-  <OuiSettings :sections="sections" :nav-label="t('Settings sections', 'Seções dos ajustes')">
+  <div v-if="state === 'banner'" style="padding: 12px 16px 0"><OuiBanner :show="waiting" tone="info" :title="t('Saving: waiting for the plugin…', 'Salvando: aguardando o plugin…')" data-test="waiting" /></div>
+  <OuiSettingsPages :sections="sections" :nav-label="t('Settings sections', 'Seções dos ajustes')" :back-label="t('Back', 'Voltar')" :error-label="t('has an error', 'tem um erro')" :layout="state === 'stack' ? 'stack' : undefined">
     <div class="oui-stack">
       <OuiFormSection id="connection" :icon="I.link" tone="cobalt" :title="t('Connection', 'Conexão')"
         :description="t('Kobra Control talks to the printer on your network. It never uses the cloud.', 'O Kobra Control fala com a impressora pela sua rede. Nunca usa a nuvem.')">
@@ -71,6 +81,7 @@ const spoolman = ref('http://192.168.1.10:7912'); const auto = ref(true); const 
         <OuiFormRow :label="t('Use Spooler\'s address', 'Usar o endereço do Spooler')" for="ks-auto"><ToggleSwitch v-model="auto" input-id="ks-auto" /></OuiFormRow>
         <OuiFormRow :label="t('Spoolman address', 'Endereço do Spoolman')" for="ks-spoolman"><InputText id="ks-spoolman" v-model="spoolman" class="oui-mono" :disabled="auto" /></OuiFormRow>
         <OuiFormRow :label="t('Book filament use', 'Registrar consumo de filamento')" for="ks-report" :hint="t('When a print finishes', 'Quando a impressão termina')"><ToggleSwitch v-model="report" input-id="ks-report" /></OuiFormRow>
+        <OuiFormRow :label="t('Read the stock every', 'Ler o estoque a cada')" for="ks-refresh"><InputNumber v-model="refresh" input-id="ks-refresh" :min="5" :max="600" suffix=" s" /></OuiFormRow>
       </OuiFormSection>
 
       <OuiFormSection id="interface" :icon="I.languages" tone="neutral" :title="t('Interface', 'Interface')">
@@ -89,13 +100,10 @@ const spoolman = ref('http://192.168.1.10:7912'); const auto = ref(true); const 
     </div>
 
     <template #footer>
-      <OuiStatus state="pending">{{ t('2 changes not saved', '2 alterações não salvas') }}</OuiStatus>
-      <span class="oui-meta">{{ t('Printer name, Address', 'Nome da impressora, Endereço') }}</span>
-      <span class="oui-spacer" />
-      <Button :label="t('Discard', 'Descartar')" severity="secondary" text />
-      <Button :label="t('Save settings', 'Salvar ajustes')"><template #icon><OuiIcon :icon="I.save" :size="14" /></template></Button>
+      <OuiSaveBar :dirty="!!changed" :changed="changed" :labels="{ unsaved: t('Unsaved changes', 'Alterações não salvas'), discard: t('Discard', 'Descartar'), save: t('Save settings', 'Salvar ajustes') }"
+        @save="stored = { name, host }" @discard="name = stored.name; host = stored.host" />
     </template>
-  </OuiSettings>
+  </OuiSettingsPages>
   <OuiToastHost :close-label="t('Close', 'Fechar')" />
 </template>
 

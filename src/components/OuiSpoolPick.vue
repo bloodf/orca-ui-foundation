@@ -10,7 +10,10 @@ import { groupByColour, materialsOf, type OuiColourGroup, type OuiPickSpool } fr
 /*
  * Pick a spool colour first. The picker draws one swatch per colour (spoolPick.ts groups them), with a count when more
  * than one spool has it, so what is drawn grows with the colours on the shelf, not the spools: a CSS circle each, no spool
- * render. A colour with one spool picks it at once; with more, a dialog lists only that colour's spools, fullest first, with
+ * render. Each swatch has its name under it (two blacks or three whites cannot be told apart by a dot): the colour's name
+ * from `colourName` when the page has one ("Black"), else the name of its fullest spool. Past NAMED_MAX colours the grid
+ * is swatches only, with the name as the tooltip, so a big shelf still fits; a search or a material brings the names back.
+ * A colour's raw key (its hex) is never shown or read out. A colour with one spool picks it at once; with more, a dialog lists only that colour's spools, fullest first, with
  * the grams and a fill bar, and one is chosen there. `pick` comes after the dialog has closed and focus is back on the
  * swatch, so a confirmation the page opens next returns focus there too.
  * Optional parts appear when their label is given: the search (`labels.search`: brand, name, material, location
@@ -30,10 +33,15 @@ export interface OuiSpoolPickLabels {
   search?: string; /** The search found nothing. */ noMatch?: string;
   /** The material filter's "every material" chip. */ allMaterials?: string;
   /** The "no spool" choice (unlink). */ none?: string;
+  /** One line under the swatches ("Spools already in a slot aren't listed."). */ hint?: string;
 }
+/** Up to this many colours every swatch has its name under it; with more, the grid is swatches only. */
+const NAMED_MAX = 24;
 type Id = OuiPickSpool['id'];
 const props = defineProps<{ spools: T[]; labels: OuiSpoolPickLabels; /** The spool picked now: its colour is marked. */ selected?: Id | null;
-  /** Grams as text; default whole grams in the page language ("1,234 g"). */ grams?: (g: number) => string }>();
+  /** Grams as text; default whole grams in the page language ("1,234 g"). */ grams?: (g: number) => string;
+  /** The colour's name in the page language ("Black", "Dark green"), for the swatch's caption, tooltip and the dialog. Default: the name of its fullest spool. */
+  colourName?: (group: OuiColourGroup<T>) => string | null | undefined }>();
 const emit = defineEmits<{ pick: [id: Id | null, spool: T | null]; close: [] }>();
 const material = defineModel<string>('material', { default: '' });
 
@@ -52,7 +60,9 @@ const selectedKey = computed(() => (props.selected == null ? null : groups.value
 
 const count = (n: number) => props.labels.spools.replace('{n}', String(n));
 const lead = (g: OuiColourGroup<T>) => g.spools[0];
-const groupLabel = (g: OuiColourGroup<T>) => [lead(g).name || (g.key ? '' : props.labels.noColour), g.key.replace(/\+/g, ' '), count(g.spools.length)].filter(Boolean).join(' · ');
+const nameOf = (g: OuiColourGroup<T>) => props.colourName?.(g) || (g.key ? lead(g).name || lead(g).material || `#${lead(g).id}` : props.labels.noColour);
+const groupLabel = (g: OuiColourGroup<T>) => (g.spools.length > 1 ? `${nameOf(g)} · ${count(g.spools.length)}` : nameOf(g));
+const named = computed(() => groups.value.length <= NAMED_MAX);
 const gramsText = (g: number | null | undefined) => (typeof g !== 'number' ? props.labels.unknown
   : props.grams ? props.grams(g) : `${Math.round(g).toLocaleString(document.documentElement.lang || undefined)} g`);
 const fraction = (s: T) => (typeof s.remaining === 'number' && typeof s.initial === 'number' && s.initial > 0 ? s.remaining / s.initial : null);
@@ -125,15 +135,17 @@ function afterHide() {
       <button v-for="m in materials" :key="m" type="button" class="oui-chip oui-spick-mat" :aria-pressed="material === m" :data-material="m"
         @click="material = material === m ? '' : m">{{ m }}</button>
     </div>
-    <div ref="grid" class="oui-spick-grid" @keydown="gridKey">
+    <div ref="grid" class="oui-spick-grid" :data-named="named || undefined" @keydown="gridKey">
       <button v-if="labels.none" type="button" class="oui-spick-none" :aria-current="selected == null || undefined" data-spick="none" @click="emit('pick', null, null)">{{ labels.none }}</button>
       <button v-for="(g, i) in groups" :key="g.key" type="button" class="oui-spick-c" :tabindex="i === at ? 0 : -1" :data-colour="g.key || 'none'"
         :aria-current="g.key === selectedKey || undefined" :aria-haspopup="g.spools.length > 1 ? 'dialog' : undefined" :aria-label="groupLabel(g)" :title="groupLabel(g)"
         @focus="at = i" @click="choose(g, $event.currentTarget as HTMLElement)">
-        <OuiSwatch :color="g.colour" :colors="g.colours" :size="28" />
-        <span v-if="g.spools.length > 1" class="oui-spick-n oui-num" aria-hidden="true">{{ g.spools.length }}</span>
+        <span class="oui-spick-dot"><OuiSwatch :color="g.colour" :colors="g.colours" :size="28" />
+          <span v-if="g.spools.length > 1" class="oui-spick-n oui-num" aria-hidden="true">{{ g.spools.length }}</span></span>
+        <span v-if="named" class="oui-spick-name" aria-hidden="true">{{ nameOf(g) }}</span>
       </button>
     </div>
+    <p v-if="labels.hint && groups.length" class="oui-meta oui-spick-hint">{{ labels.hint }}</p>
     <p v-if="!groups.length" class="oui-meta oui-spick-empty">{{ query.trim() && labels.noMatch ? labels.noMatch : labels.empty }}</p>
     <Dialog v-model:visible="visible" modal :header="labels.choose" :style="{ width: '440px', maxWidth: 'calc(100vw - 32px)' }" data-spick="dialog"
     @after-hide="afterHide">
@@ -155,7 +167,9 @@ function afterHide() {
 .oui-spick { display: grid; gap: var(--oui-s2); min-width: 0; }
 .oui-spick-q { width: 100%; min-width: 0; }
 .oui-spick-mats { display: flex; flex-wrap: wrap; gap: 4px; }
-.orca-ui .oui-spick-mat { border: 0; font: inherit; font-size: var(--oui-text-xs); cursor: pointer; }
+/* The material filter: buttons of the small control height, not 16 px tags. */
+.orca-ui .oui-spick-mat { height: var(--oui-control-sm); padding: 0 10px; border: 0; border-radius: var(--oui-radius); font: inherit; font-size: var(--oui-text-sm); font-weight: 600; cursor: pointer; }
+.orca-ui .oui-spick-mat:hover { color: var(--oui-text); }
 .orca-ui .oui-spick-mat[aria-pressed='true'] { background: var(--oui-primary-soft); color: var(--oui-text); box-shadow: inset 0 0 0 1px var(--oui-primary-mark); }
 .oui-spick-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 240px; overflow: auto; padding: 2px; }
 .orca-ui .oui-spick-c { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--oui-radius-sm);
@@ -163,6 +177,13 @@ function afterHide() {
 .orca-ui .oui-spick-c:hover { background: var(--oui-control); }
 .orca-ui .oui-spick-c:focus-visible { outline: 2px solid var(--oui-primary-mark); outline-offset: 0; }
 .orca-ui .oui-spick-c[aria-current='true'] { box-shadow: inset 0 0 0 2px var(--oui-primary-mark); }
+/* Named: a 72 px cell, the swatch over its name (two lines at most). */
+.oui-spick-dot { position: relative; display: grid; place-items: center; width: 40px; height: 36px; }
+.oui-spick-grid[data-named] { max-height: 320px; }
+.orca-ui .oui-spick-grid[data-named] .oui-spick-c { width: 72px; height: auto; min-height: 66px; align-content: start; justify-items: center; gap: 1px; padding: 2px 2px 4px; }
+.oui-spick-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; max-width: 100%; font-size: var(--oui-text-xs); line-height: 1.25;
+  text-align: center; overflow-wrap: anywhere; color: var(--oui-text); }
+.oui-spick-hint { margin: 0; }
 .oui-spick-n { position: absolute; inset: auto 0 0 auto; min-width: 16px; padding: 0 3px; border-radius: 8px; background: var(--oui-raised); color: var(--oui-text);
   font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; box-shadow: 0 0 0 1px var(--oui-border); }
 .orca-ui .oui-spick-none { height: 40px; padding: 0 var(--oui-s2); border: 1px dashed var(--oui-control-border); border-radius: var(--oui-radius-sm); background: none;
@@ -171,7 +192,9 @@ function afterHide() {
 .oui-spick-empty { margin: 0; padding: var(--oui-s2); }
 .oui-spick-sub { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--oui-s2); }
 .oui-spick-list { display: grid; gap: 2px; max-height: min(60vh, 420px); overflow: auto; }
-.orca-ui .oui-spick-row { display: flex; align-items: center; gap: var(--oui-s2); min-width: 0; padding: 6px var(--oui-s2); border: 0; border-radius: var(--oui-radius-sm);
+/* ponytail: rows out of view are not laid out or painted (content-visibility), which is what several hundred spools of one
+   colour cost; their DOM nodes are still made. Window the list if a colour ever holds thousands. */
+.orca-ui .oui-spick-row { content-visibility: auto; contain-intrinsic-size: auto 46px; display: flex; align-items: center; gap: var(--oui-s2); min-width: 0; padding: 6px var(--oui-s2); border: 0; border-radius: var(--oui-radius-sm);
   background: none; color: var(--oui-text); font: inherit; text-align: start; cursor: pointer; }
 .orca-ui .oui-spick-row:hover, .orca-ui .oui-spick-row:focus-visible { background: var(--oui-control); }
 .orca-ui .oui-spick-row[aria-current='true'] { background: var(--oui-primary-soft); }

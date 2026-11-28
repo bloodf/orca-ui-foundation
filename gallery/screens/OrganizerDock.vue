@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
-import { OuiAppBar, OuiBanner, OuiEmpty, OuiIcon, OuiJob, OuiKeyValue, OuiPanel, OuiStatus } from '../../src/components';
+import { OuiAppBar, OuiBanner, OuiEmpty, OuiIcon, OuiJob, OuiKeyValue, OuiPanel, OuiSavedCopy, OuiStatus } from '../../src/components';
 import * as I from '../../src/icons';
 import { t } from '../i18n';
 import { MARKS } from '../marks';
@@ -59,15 +59,11 @@ const path = '/example/user/Library/Application Support/OrcaSlicer/plugins/stora
       <template v-else-if="done">
         <OuiBanner tone="success" :title="t('7 objects placed, 12 copies added.', '7 objetos posicionados, 12 cópias adicionadas.')" />
         <OuiBanner tone="warn" :title="t('2 objects did not fit:', '2 objetos não couberam:')">Phone stand, Cable clip</OuiBanner>
-        <div class="od-saved">
-          <p class="oui-label">{{ t('Saved copy', 'Cópia salva') }}</p>
-          <p class="oui-mono oui-truncate od-path" :title="path">{{ file }}</p>
+        <!-- 5.14: the saved-copy card every plugin shares. The path is not shown while opening works. -->
+        <OuiSavedCopy :title="t('Desk organizer · plate 2 arranged', 'Organizador de mesa · placa 2 arrumada')" :meta="t('just now', 'agora')" :file="file" :path="path"
+          :labels="{ heading: t('Saved copy', 'Cópia salva'), open: t('Open in OrcaSlicer', 'Abrir no OrcaSlicer'), copyPath: t('Copy path', 'Copiar caminho'), copied: t('Copied', 'Copiado') }">
           <OuiKeyValue class="od-facts" :items="[{ label: 'Tray', value: t('8 copies', '8 cópias') }, { label: 'Pen cup', value: t('4 copies', '4 cópias') }, { label: t('Clearance', 'Folga'), value: '12.5 mm' }]" />
-          <div class="od-saved-actions">
-            <Button :label="t('Open copy in OrcaSlicer', 'Abrir cópia no OrcaSlicer')"><template #icon><OuiIcon :icon="I.external" :size="14" /></template></Button>
-            <Button :label="t('Copy path', 'Copiar caminho')" severity="secondary" text size="small"><template #icon><OuiIcon :icon="I.copy" :size="14" /></template></Button>
-          </div>
-        </div>
+        </OuiSavedCopy>
       </template>
 
       <OuiPanel v-else class="od-idle" :title="t('Result', 'Resultado')" :icon="I.file" tone="neutral">
@@ -91,16 +87,13 @@ const path = '/example/user/Library/Application Support/OrcaSlicer/plugins/stora
 .od-adv[open] > summary > .oui-icon { transform: rotate(90deg); }
 .od-adv-body { display: grid; gap: var(--oui-s3); padding-top: var(--oui-s2); }
 .od-result { display: grid; gap: var(--oui-s2); align-content: start; min-width: 0; }
-.od-saved { display: grid; gap: var(--oui-s2); padding: var(--oui-s3); border-radius: var(--oui-radius-lg); background: var(--oui-surface); box-shadow: inset 0 0 0 1px var(--oui-border), var(--oui-shadow-panel); }
-.od-saved-actions { display: grid; gap: var(--oui-s1); justify-items: stretch; }
-.od-path { color: var(--oui-muted); }
 /* The dock shows one thing at a time: the form, the running job or the result. A tab has room for both. */
 @container oui-page (max-width: 620px) {
   .od-grid[data-state='running'] .od-form, .od-grid[data-state='done'] .od-form, .od-idle { display: none; }
   .od-facts { display: none; }
+  .oui-saved-notes:has(> .od-facts:only-child) { display: none; }
 }
 @container oui-page (min-width: 621px) {
-  .od-saved-actions { display: flex; flex-wrap: wrap; }
   .od-grid { grid-template-columns: minmax(280px, 360px) minmax(0, 560px); gap: var(--oui-s4); }
   .od-form { padding: var(--oui-s4); border-radius: var(--oui-radius-lg); background: var(--oui-surface); box-shadow: inset 0 0 0 1px var(--oui-border), var(--oui-shadow-panel); }
 }

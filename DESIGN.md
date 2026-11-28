@@ -265,7 +265,7 @@ Import each from `shared/src/components` (or its own `.vue` file).
 | `OuiSetpoint` | a controlled value: reading in its phase colour, target, chart, input, Set, Off. Opt-in: `validate` (refuse a value at Set, with a reason line), `v-model:draft` with `invalid` (refuse it while it is typed), `error`, `inputId`, `offAlways`, decimals and `locale` |
 | `OuiControlRow` | **new.** A line of a controls module: icon, label, current value, control. With `.oui-controls` and `.oui-controls-group` |
 | `OuiCamera` | **new.** The 16:9 picture box with its live, off, loading and error states; `fit`, a `frame` event per picture, `#picture` for the page's own player |
-| `OuiSlot` | a toolhead or slot as a neutral card: a 4 px strip of the filament's colour, badge and state, drawn spool, filament, amount with its level, extra rows, actions; `active` |
+| `OuiSlot` | a toolhead or slot as a neutral card: a 4 px strip of the filament's colour, badge and state, drawn spool, filament, amount with its level, extra rows, actions; `active`. An empty slot is one light row: badge, label, actions (5.14) |
 | `OuiFileBrowser`, `useFileBackend` | **new.** The Files tab (above) and the adapter that feeds it |
 | `OuiSpool`, `OuiSwatch`, `OuiLevel` | unchanged |
 | `OuiReadout`, `OuiSpark`, `OuiThumb`, `OuiKeyValue`, `OuiToolbar`, `OuiEmpty`, `OuiToastHost`, `OuiRequirement`, `OuiSettings`, `OuiFormSection`, `OuiFormRow`, `OuiConfirm`, `OuiIcon` | as in 4.x, neutral |

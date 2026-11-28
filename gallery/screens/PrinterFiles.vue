@@ -9,7 +9,8 @@ import PrinterBar from '../v5/PrinterBar.vue';
 import { FILES, FOLDERS } from '../v5/data';
 // MOCK — the Files tab of both printer plugins: one OuiFileBrowser over a backend adapter (useFileBackend).
 // ?screen=u1-files: a storage with folders that can move files and make folders (the tree, "Move to", drag onto a folder, "New folder").
-// ?screen=kobra-files: a storage with no folders (no tree, no move; multi-select and delete as with folders).
+// ?screen=kobra-files: a storage with no folders (no tree, no move; multi-select and delete as with folders), and no list/grid switch (5.14: viewToggle).
+// 5.14: both lists show a print's time and filament as columns (columns, OuiFile.cells) where the window has the room.
 // state: '' (one file selected) | 'multi' (three selected: the bulk bar) | 'loading' | 'empty' | 'error' | 'slow' (a move or delete takes half a second, as on a real printer).
 const props = defineProps<{ state: string }>();
 const plugin = param('screen', 'u1-files').startsWith('kobra') ? 'kobra' : 'u1';
@@ -76,6 +77,7 @@ const labels: OuiFileBrowserLabels = {
     </OuiPageHeader>
     <!-- The Kobra list opens newest first; the U1 one by name. -->
     <OuiFileBrowser v-bind="files.props" :files="shown" :ranked="!!search.trim()" :labels="labels" :sort="flat ? { key: 'modified', down: true } : undefined" :view-key="'gallery-' + plugin"
+      :columns="[{ key: 'time', label: t('Print time', 'Tempo') }, { key: 'filament', label: t('Filament', 'Filamento'), width: 92 }]" :view-toggle="!flat"
       :file-menu="ids => [{ label: t('Download', 'Baixar'), icon: I.download, run: () => toast.show({ tone: 'info', title: t(`Downloading ${ids.length}`, `Baixando ${ids.length}`) }) }]" v-on="files.on">
       <!-- With no folders the slot is as wide as the bar: a spacer pushes its items apart. -->
       <template #toolbar><InputText v-model="search" size="small" :placeholder="flat ? t('Search files', 'Buscar arquivos') : t('Search this folder', 'Buscar nesta pasta')" :aria-label="t('Search files', 'Buscar arquivos')" style="width: 220px" />

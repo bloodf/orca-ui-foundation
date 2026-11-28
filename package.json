@@ -1,6 +1,6 @@
 {
   "name": "@orca-plugins/ui-foundation",
-  "version": "5.13.3",
+  "version": "5.14.0",
   "private": true,
   "type": "module",
   "description": "Shared Vue 3 and PrimeVue 5 visual foundation for Orca plugins",

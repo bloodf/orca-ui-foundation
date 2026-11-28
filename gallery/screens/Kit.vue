@@ -5,7 +5,7 @@ import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import ProgressBar from 'primevue/progressbar';
 import Select from 'primevue/select';
-import { OuiAppBar, OuiBanner, OuiConfirm, OuiEmpty, OuiIcon, OuiLevel, OuiPanel, OuiPresetMatch, OuiReadout, OuiSlot, OuiSpark, OuiSpool, OuiStatus, OuiSwatch, OuiThumb, type OuiState, type OuiTone } from '../../src/components';
+import { OuiAppBar, OuiBanner, OuiConfirm, OuiEmpty, OuiIcon, OuiLevel, OuiListRow, OuiPanel, OuiPresetMatch, OuiReadout, OuiSavedCopy, OuiSlot, OuiSpark, OuiSpool, OuiStatus, OuiSwatch, OuiThumb, relativeTime, type OuiState, type OuiTone } from '../../src/components';
 import { palette } from '../../src';
 import * as I from '../../src/icons';
 import { param, t } from '../i18n';
@@ -36,7 +36,12 @@ const states: [OuiState, string][] = [['ok', t('Connected', 'Conectada')], ['bus
   ['stale', t('Read 5 min ago', 'Lido há 5 min')], ['warn', t('Low', 'Baixo')], ['error', t('Failed', 'Falhou')], ['offline', t('Offline', 'Sem conexão')], ['idle', t('Idle', 'Parada')]];
 const type: [string, string, string][] = [['--oui-text-3xl', '40 / 600', '37 %'], ['--oui-text-2xl', '28 / 600', 'R$ 92.10'], ['--oui-text-xl', '20 / 600', '219.6 °C'],
   ['--oui-text-lg', '15 / 650', 'desk_organiser_plate_1.gcode'], ['--oui-text-md', '13 / 400', t('Body and controls', 'Texto e controles')], ['--oui-text-sm', '12 / 400', t('Secondary line', 'Linha secundária')]];
-const matchLabels = { change: t('Change', 'Trocar'), none: t('No preset', 'Nenhum preset'), score: t('Score {n}', 'Nota {n}'), auto: t('Automatic', 'Automático'), autoHint: t('Forget the choice made by hand', 'Esquecer a escolha manual') };
+const matchLabels = { change: t('Change', 'Trocar'), none: t('No preset', 'Nenhum preset'), review: t('Another preset is a close match. Worth a look.', 'Outro preset é quase igual. Vale conferir.'),
+  auto: t('Automatic', 'Automático'), autoHint: t('Forget the choice made by hand', 'Esquecer a escolha manual') };
+const matched = ref('Spooler/Generic PLA @Snapmaker U1');
+const inHand = ref<string | null>('b');
+const savedLabels = { heading: t('Saved copy', 'Cópia salva'), open: t('Open in OrcaSlicer', 'Abrir no OrcaSlicer'), copyPath: t('Copy path', 'Copiar caminho'), copied: t('Copied', 'Copiado'), path: t('Saved at', 'Salvo em') };
+const NOW = Date.now();
 const icons = Object.entries(I) as [string, I.OuiIconData][];
 const ART: [string, string, string, string][] = [
   ['Kobra Control', artKobra, t('Connect your Kobra X', 'Conecte sua Kobra X'), t('Enter its address in Settings to see the print here.', 'Informe o endereço nos Ajustes para ver a impressão aqui.')],
@@ -187,6 +192,8 @@ const wide = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.
           <OuiSpool color="#d9692a" :fraction="1" :size="56" /><OuiSpool color="#2850a8" :fraction="0.5" :size="56" /><OuiSpool color="#111111" :fraction="0.2" :size="56" /><OuiSpool color="#f4f4f1" :fraction="0.8" :size="56" />
           <OuiSpool :colors="['#7a5cff', '#22c1c3', '#fdbb2d']" :fraction="0.7" :size="56" /><OuiSpool :fraction="0" :size="56" /><OuiSpool :fraction="null" :size="56" />
           <OuiSpool color="#2850a8" :fraction="null" :size="56" /><OuiSpool :colors="['#e5484d', '#f5d90a', '#3e63dd']" :fraction="null" :size="40" />
+          <!-- 5.14: black and charcoal at the size of a table row: a clear rim on the dark theme. -->
+          <OuiSpool color="#111111" :fraction="0.9" :size="28" /><OuiSpool color="#1a1a1a" :fraction="0.5" :size="28" /><OuiSpool color="#2b2b2b" :fraction="0.2" :size="28" /><OuiSpool color="#2850a8" :fraction="0.9" :size="28" />
           <OuiSwatch color="#2850a8" :size="16" /><OuiSwatch color="#111111" :size="16" /><OuiSwatch color="#ffffff" :size="16" /><OuiSwatch :size="16" />
           <OuiThumb :src="tall" :size="48" /><OuiThumb :src="wide" :size="48" /><OuiThumb :size="48" />
         </div>
@@ -212,21 +219,49 @@ const wide = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.
         </div>
       </OuiPanel>
 
-      <OuiPanel :title="t('Preset match', 'Preset escolhido')" :icon="I.spool" tone="magenta" :meta="t('clear pick · close call, open', 'escolha clara · escolha apertada, aberta')">
+      <OuiPanel :title="t('Preset match', 'Preset escolhido')" :icon="I.spool" tone="magenta" :meta="t('clear pick · close call, open: names only, no score, no reasons', 'escolha clara · escolha apertada, aberta: só nomes, sem nota, sem motivos')">
         <div class="oui-cards" style="--oui-cards-4: 9999px">
-          <OuiPresetMatch name="Polymaker PLA Matte @U1" :score="49" confident :reasons="[t('PLA', 'PLA'), t('vendor Polymaker', 'fabricante Polymaker'), t('matte', 'matte'), t('made for this printer', 'feito para esta impressora')]"
-            :candidates="[]" :labels="matchLabels" />
-          <OuiPresetMatch name="Generic PLA @U1" :score="35" :reasons="[t('PLA', 'PLA'), t('Generic', 'Genérico'), t('made for this printer', 'feito para esta impressora')]" remembered :badge="t('Remembered', 'Lembrado')"
-            :candidates="[{ name: 'Generic PLA @U1', score: 35, reasons: [t('Generic', 'Genérico')] }, { name: 'Generic PLA Silk @U1', score: 29, reasons: [t('silk: not on the spool', 'silk: não está na bobina')] },
-                          { name: 'Polymaker PLA (OFD)', badge: t('OFD, untuned', 'OFD, sem ajuste'), note: t('Open Filament Database', 'Open Filament Database') }]" :labels="matchLabels" />
+          <OuiPresetMatch name="_local/spooler/Polymaker PLA Matte @Snapmaker U1" confident :candidates="[]" :labels="matchLabels" data-test="match-sure" />
+          <OuiPresetMatch :name="matched" :confident="false" remembered data-test="match-unsure" :labels="matchLabels" @pick="matched = $event ?? 'Generic PLA @Snapmaker U1'"
+            :candidates="[{ name: 'Spooler/Generic PLA @Snapmaker U1' }, { name: 'Generic PLA Silk @Snapmaker U1' }, { name: 'Generic PLA @BBL X1C' }, { name: 'Generic PLA @Snapmaker U1' },
+                          { name: 'Polymaker PLA Matte @Snapmaker U1', disabled: true, note: t('Made for another nozzle', 'Feito para outro bico') }]" />
         </div>
+      </OuiPanel>
+
+      <OuiPanel :title="t('Saved copy', 'Cópia salva')" :icon="I.save" tone="sky" :meta="t('opened · could not be opened: the path shows', 'aberta · não abriu: o caminho aparece')">
+        <div class="oui-cards" style="--oui-cards-4: 9999px">
+          <OuiSavedCopy :title="t('Desk organizer · plate 2 arranged', 'Organizador de mesa · placa 2 arrumada')" :meta="relativeTime(NOW - 3 * 60_000)" file="desk-organizer-arranged-20261111-195500-1f3ffe.3mf"
+            path="$HOME/Library/Application Support/OrcaSlicer/plugins/storage/desk-organizer-arranged-20261111-195500-1f3ffe.3mf" :labels="savedLabels"
+            :status="t('OrcaSlicer was asked to open the copy.', 'O OrcaSlicer foi chamado para abrir a cópia.')" data-test="saved-ok">
+            <p>{{ t('Rotation was limited to 90° steps.', 'A rotação ficou limitada a passos de 90°.') }}</p>
+          </OuiSavedCopy>
+          <OuiSavedCopy :title="t('Desk organizer · 3 pockets added', 'Organizador de mesa · 3 bolsos adicionados')" :meta="relativeTime(NOW - 26 * 3_600_000)" failed
+            path="$HOME/Library/Application Support/OrcaSlicer/plugins/storage/desk-organizer-pockets-20261110-101500-9a2c41.3mf" :labels="savedLabels"
+            :status="t('OrcaSlicer could not open the copy. Open it from this folder:', 'O OrcaSlicer não abriu a cópia. Abra a partir desta pasta:')" data-test="saved-failed" />
+        </div>
+      </OuiPanel>
+
+      <OuiPanel :title="t('Rows and a plain table', 'Linhas e uma tabela simples')" :icon="I.list" tone="neutral" flush :meta="t('OuiListRow selectable · .oui-table', 'OuiListRow selecionável · .oui-table')">
+        <ul class="oui-list" data-test="rows">
+          <OuiListRow v-for="[key, name, where] in [['a', '20 × 10 × 3 mm block', t('Lid · 2 mm under the top', 'Tampa · 2 mm abaixo do topo')], ['b', 'Ø30 × 0.5 mm disc', t('Base · on the bed', 'Base · na mesa')]]" :key="key"
+            selectable :selected="inHand === key" @update:selected="inHand = $event ? key : null">
+            <OuiIcon :icon="I.magnet" :size="16" tile tone="lime" /><span style="display: grid"><span class="oui-strong">{{ name }}</span><span class="oui-meta">{{ where }}</span></span>
+            <template #actions><Button text severity="danger" size="small" :aria-label="t('Remove', 'Remover')"><template #icon><OuiIcon :icon="I.trash" :size="14" /></template></Button></template>
+          </OuiListRow>
+        </ul>
+        <div class="oui-table-wrap"><table class="oui-table" data-dense>
+          <thead><tr><th>{{ t('Filament', 'Filamento') }}</th><th class="oui-num">{{ t('Spools', 'Bobinas') }}</th><th class="oui-num">{{ t('Remaining', 'Restante') }}</th></tr></thead>
+          <tbody><tr><td>PLA Galaxy Black</td><td class="oui-num">2</td><td class="oui-num">1.52 kg</td></tr><tr><td>PETG Blue</td><td class="oui-num">2</td><td class="oui-num">340 g</td></tr></tbody>
+        </table></div>
       </OuiPanel>
 
       <OuiPanel :title="t('Nothing to show', 'Nada a mostrar')" :icon="I.box" tone="neutral" flush>
         <div class="kit-empties">
           <OuiEmpty :icon="I.spool" tone="magenta" :title="t('No spools yet', 'Nenhuma bobina ainda')" :text="t('Add one in Spoolman and refresh.', 'Adicione uma no Spoolman e atualize.')"><template #actions><Button :label="t('Refresh', 'Atualizar')" severity="secondary" size="small" /></template></OuiEmpty>
           <OuiEmpty state="loading" :title="t('Reading stock', 'Lendo o estoque')" />
-          <OuiEmpty state="error" :title="t('Spoolman did not answer', 'O Spoolman não respondeu')" :text="t('Check its address in Settings.', 'Confira o endereço nos Ajustes.')" />
+          <OuiEmpty state="error" :title="t('Spoolman did not answer', 'O Spoolman não respondeu')" :text="t('Check its address in Settings.', 'Confira o endereço nos Ajustes.')"
+            details="[Errno 61] Connection refused" :details-label="t('Technical details', 'Detalhes técnicos')" />
+          <OuiEmpty compact state="offline" :title="t('No status yet', 'Sem status ainda')" />
         </div>
       </OuiPanel>
     </template>

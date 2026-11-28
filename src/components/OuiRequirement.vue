@@ -1,5 +1,10 @@
+<script lang="ts">
+import type { InjectionKey } from 'vue';
+/** Set by OuiRequirementList: its rows leave "Check again" to the list. */
+export const OUI_REQ_LIST: InjectionKey<true> = Symbol('oui-req-list');
+</script>
 <script setup lang="ts">
-import { getCurrentInstance } from 'vue';
+import { getCurrentInstance, inject } from 'vue';
 import OuiIcon from './OuiIcon.vue';
 import OuiStatus from './OuiStatus.vue';
 import { link, refresh } from '../icons';
@@ -10,12 +15,18 @@ import { link, refresh } from '../icons';
  * (and where), how to get it when it is missing, and lets the user look again after installing it.
  * All text comes from the plugin, in the page language. `check` is emitted by "Check again"; `open` by the install link
  * (the plugin opens the address in the system browser; without a listener the link opens as a normal link).
+ *
+ * "Check again" looks at everything again, so a list of rows has one, not one per row: put the rows in an
+ * OuiRequirementList (its rows drop their own button), or leave out `checkLabel` (or set `hideCheck`) and render one
+ * yourself. A row on its own keeps its button.
  */
 const props = defineProps<{ name: string; /** What the plugin uses it for. */ why?: string;
   status: 'found' | 'missing' | 'checking' | 'unknown'; /** The status chip text ("Found", "Not found"). */ statusLabel: string;
   /** Where it was found, or what was found ("/usr/bin/ffmpeg · 7.1"). */ detail?: string;
   /** How to install it, one line. */ installText?: string; installUrl?: string; installLabel?: string;
-  checkLabel: string; checking?: boolean; /** Check again is off (nothing to check against yet); the row still shows. */ disabled?: boolean }>();
+  /** The row's own "Check again"; without it (or with `hideCheck`, or in an OuiRequirementList) the row has no button. */ checkLabel?: string; hideCheck?: boolean;
+  checking?: boolean; /** Check again is off (nothing to check against yet); the row still shows. */ disabled?: boolean }>();
+const inList = inject(OUI_REQ_LIST, undefined);
 const emit = defineEmits<{ check: []; open: [url: string] }>();
 const STATE = { found: 'ok', missing: 'warn', checking: 'busy', unknown: 'idle' } as const;
 const listens = !!getCurrentInstance()?.vnode.props?.onOpen;
@@ -38,7 +49,7 @@ function onLink(event: MouseEvent) {
     </div>
     <div class="oui-req-side">
       <OuiStatus :state="STATE[status]">{{ statusLabel }}</OuiStatus>
-      <button type="button" class="oui-req-check" :disabled="disabled || checking || status === 'checking'" @click="emit('check')">
+      <button v-if="checkLabel && !hideCheck && !inList" type="button" class="oui-req-check" :disabled="disabled || checking || status === 'checking'" @click="emit('check')">
         <OuiIcon :icon="refresh" :size="14" /><span>{{ checkLabel }}</span>
       </button>
     </div>
@@ -48,7 +59,7 @@ function onLink(event: MouseEvent) {
 .oui-req { container: oui-req / inline-size; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--oui-s2) var(--oui-s4); padding: var(--oui-s3) var(--oui-s4); }
 .oui-req-id { flex: 1 1 240px; display: grid; gap: 2px; min-width: 0; }
 .oui-req-name { font-weight: 650; }
-.oui-req-detail { font-family: var(--oui-mono); font-size: var(--oui-text-xs); overflow-wrap: anywhere; }
+.oui-req-detail { overflow-wrap: anywhere; }
 .oui-req-install { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--oui-s2); margin-top: 2px; }
 .oui-req-link { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; overflow-wrap: anywhere; }
 .oui-req-side { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--oui-s2); margin-inline-start: auto; }

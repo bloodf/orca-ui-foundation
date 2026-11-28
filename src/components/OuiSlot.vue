@@ -6,8 +6,9 @@ import OuiLevel from './OuiLevel.vue';
 /*
  * Where a spool sits on a printer: a toolhead, an ACE or AMS slot, an external holder. A neutral card with a 4 px strip of
  * the filament's own colour across its top, ringed so black, white and clear still read; the drawn spool shows the same
- * colour at size. The badge is the slot's identity (its label and, for toolheads, its fixed colour). An empty slot has a
- * dashed frame and no strip.
+ * colour at size. The badge is the slot's identity (its label and, for toolheads, its fixed colour). An empty slot is one
+ * quiet row in a dashed frame: its badge, the empty label and its actions; no strip, no drawn spool, and as tall as that
+ * row, not as its full neighbours.
  * The amount is grams left of grams total with a level bar; give `#amount` to show anything else, or nothing.
  * Per-slot reasons for disabled actions do not belong here: the page says the reason once (OuiBanner).
  */
@@ -35,7 +36,7 @@ const grams = (n: number) => { try { return Math.round(n).toLocaleString(documen
       <span v-if="$slots.state" class="oui-slot-state"><slot name="state" /></span>
     </header>
     <div class="oui-slot-main">
-      <OuiSpool :color="empty ? null : color" :colors="empty ? null : colors" :fraction="empty ? null : fraction" :size="52" />
+      <OuiSpool v-if="!empty" :color="color" :colors="colors" :fraction="fraction" :size="52" />
       <div class="oui-slot-id">
         <p class="oui-slot-name" :title="name ?? undefined">{{ empty ? emptyLabel : name || material }}</p>
         <p v-if="!empty" class="oui-meta oui-truncate"><slot name="meta">{{ material }}</slot></p>
@@ -57,7 +58,12 @@ const grams = (n: number) => { try { return Math.round(n).toLocaleString(documen
 .oui-slot { display: flex; flex-direction: column; gap: var(--oui-s2); min-width: 0; padding: var(--oui-s2) var(--oui-s1) var(--oui-s2); border-radius: var(--oui-radius-lg);
   background: var(--oui-raised); box-shadow: inset 0 0 0 1px var(--oui-border); }
 .oui-slot[data-active] { box-shadow: inset 0 0 0 2px var(--oui-primary-mark); }
-.oui-slot[data-empty] { background: none; box-shadow: none; outline: 1.5px dashed var(--oui-control-border); outline-offset: -1.5px; }
+/* Empty: one row (badge, label, actions), wrapping in a narrow card; what the page adds (#default) goes under it. */
+.oui-slot[data-empty] { flex-direction: row; flex-wrap: wrap; align-items: center; align-self: start; min-height: 48px; padding-block: var(--oui-s1); background: none; box-shadow: none;
+  outline: 1.5px dashed var(--oui-control-border); outline-offset: -1.5px; }
+.oui-slot[data-empty] > .oui-slot-main { flex: 1 1 auto; }
+.oui-slot[data-empty] > .oui-slot-actions { margin-top: 0; padding-top: 0; }
+.oui-slot[data-empty] > .oui-slot-extra { flex: 1 0 100%; }
 .oui-slot > :not(.oui-slot-strip) { padding-inline: 6px; }
 /* The strip: 4 px of the filament's colour inside a hairline ring. Hatched when the colour is not known. */
 .oui-slot-strip { display: block; height: 6px; margin: -2px 2px 0; border: 1px solid color-mix(in srgb, var(--oui-text) 34%, transparent); border-radius: 3px; background-clip: padding-box; }

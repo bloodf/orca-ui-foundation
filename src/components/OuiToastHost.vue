@@ -6,10 +6,16 @@ import { dismissToast, pauseToast, resumeToast, toastList, type OuiToastTone } f
 import type { OuiTone } from './tones';
 
 /*
- * Where toasts appear: bottom-left, stacked, newest at the bottom. Mount once, at the end of the app's root. Errors are
+ * Where toasts appear: bottom-right, stacked, newest at the bottom. Mount once, at the end of the app's root. Errors are
  * role="alert", the rest role="status". Closing a focused toast returns focus to where it came from.
+ *
+ * Bottom-right is where a page has no primary actions: forms, slot cards and lists start at the left, and a settings
+ * page's save bar lifts the stack above itself (--oui-toast-bottom). Up to 5.13 the stack was bottom-left, over the
+ * first column's buttons. `position` moves it for a page whose own layout needs another corner; the same in every tab of
+ * a plugin, please.
  */
-const props = defineProps<{ /** Accessible name of each close button. */ closeLabel?: string; /** Accessible name of the region. */ label?: string }>();
+const props = defineProps<{ /** Accessible name of each close button. */ closeLabel?: string; /** Accessible name of the region. */ label?: string;
+  /** The corner of the window the stack sits in (default `bottom-right`). */ position?: 'bottom-right' | 'bottom-left' | 'top-right' }>();
 const TONE: Record<OuiToastTone, OuiTone> = { info: 'info', success: 'success', warn: 'warn', error: 'danger' };
 const ICON = { info, success: check, warn: warning, error };
 
@@ -39,7 +45,7 @@ watch(() => toastList.list.map(t => t.id), (ids) => {
 }, { flush: 'sync' });
 </script>
 <template>
-  <section class="oui-toasts" :aria-label="props.label ?? 'Notifications'">
+  <section class="oui-toasts" :data-position="props.position ?? 'bottom-right'" :aria-label="props.label ?? 'Notifications'">
     <TransitionGroup name="oui-toast">
       <div v-for="t in toastList.list" :key="t.id" class="oui-toast" :data-toast-id="t.id" :data-tone="TONE[t.tone]" :data-toast-tone="t.tone"
         :role="t.tone === 'error' ? 'alert' : 'status'" :aria-live="t.tone === 'error' ? 'assertive' : 'polite'" aria-atomic="true"
@@ -55,10 +61,12 @@ watch(() => toastList.list.map(t => t.id), (ids) => {
   </section>
 </template>
 <style>
-/* Bottom-left, over the page; the stack keeps a gutter on the narrow dock. A page with its own bar along the bottom edge
-   lifts the stack above it with --oui-toast-bottom. */
-.oui-toasts { position: fixed; left: 16px; bottom: var(--oui-toast-bottom, 16px); z-index: 1100; display: grid; gap: var(--oui-s2); width: min(380px, calc(100vw - 32px));
+/* Bottom-right by default, over the page; the stack keeps a gutter on the narrow dock. A page with its own bar along the
+   bottom edge lifts the stack above it with --oui-toast-bottom; at the top it starts under the app bar (--oui-toast-top). */
+.oui-toasts { position: fixed; right: 16px; bottom: var(--oui-toast-bottom, 16px); z-index: 1100; display: grid; gap: var(--oui-s2); width: min(380px, calc(100vw - 32px));
   pointer-events: none; }
+.oui-toasts[data-position='bottom-left'] { right: auto; left: 16px; }
+.oui-toasts[data-position='top-right'] { bottom: auto; top: var(--oui-toast-top, 56px); }
 .oui-toast { pointer-events: auto; display: flex; align-items: flex-start; gap: var(--oui-s2); min-height: 44px; padding: 8px 6px 8px 10px; border-radius: var(--oui-radius-lg);
   color: var(--oui-text); background: var(--oui-surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oui-tone) 50%, transparent), inset 3px 0 0 var(--oui-tone), var(--oui-shadow-overlay); }
 .oui-toast > .oui-icon { margin-top: 1px; }
@@ -69,7 +77,8 @@ watch(() => toastList.list.map(t => t.id), (ids) => {
 .oui-toast-close { width: 28px; color: var(--oui-muted); }
 .oui-toast-action:hover, .oui-toast-close:hover { color: var(--oui-text); background: var(--oui-raised); }
 .oui-toast-enter-active, .oui-toast-leave-active { transition: opacity var(--oui-base) var(--oui-ease), transform var(--oui-base) var(--oui-ease); }
-.oui-toast-enter-from, .oui-toast-leave-to { opacity: 0; transform: translateX(-12px); }
+.oui-toast-enter-from, .oui-toast-leave-to { opacity: 0; transform: translateX(12px); }
+.oui-toasts[data-position='bottom-left'] :is(.oui-toast-enter-from, .oui-toast-leave-to) { transform: translateX(-12px); }
 .oui-toast-leave-active { position: absolute; width: 100%; }
 .oui-toast-move { transition: transform var(--oui-base) var(--oui-ease); }
 @media (prefers-reduced-motion: reduce) { .oui-toast-enter-active, .oui-toast-leave-active, .oui-toast-move { transition: none; } .oui-toast-enter-from, .oui-toast-leave-to { transform: none; } }

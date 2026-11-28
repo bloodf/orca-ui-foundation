@@ -40,6 +40,7 @@ export const FOLDERS: OuiFolder[] = [
 const tile = (colour: string) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 60"><rect width="96" height="60" fill="none"/><path d="M12 46 30 26h36l18 20z" fill="#8a8d93" fill-opacity=".35"/><path d="M34 44c-2-16 4-28 14-28s16 12 14 28z" fill="${colour}"/></svg>`);
 const F = (name: string, mb: number, days: number, colour: string, time: string, grams: number): OuiFile => ({ id: name, name, size: mb * 1048576, sizeText: mb.toFixed(1) + ' MB',
   modified: -days, modifiedText: days === 0 ? t('Today', 'Hoje') : days === 1 ? t('Yesterday', 'Ontem') : new Date(2026, 10, 19 - days, 19, 4).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' }), kind: name.endsWith('.3mf') ? '3MF' : 'G-code', thumb: tile(colour),
+  cells: { time, filament: grams + ' g' },
   facts: [{ label: t('Print time', 'Tempo de impressão'), value: time }, { label: t('Filament', 'Filamento'), value: grams + ' g' }, { label: t('Layer height', 'Altura da camada'), value: '0.20 mm' }, { label: t('Filaments', 'Filamentos'), value: 'PLA' }] });
 export const FILES: OuiFile[] = [
   F('CHROMA_V8_50_slots_pull_tray_PLA_84.4g_2h52m.gcode', 18.4, 0, '#3d4046', '2 h 52 min', 84), F('CHROMA_V8_lid_PLA_41.0g_1h20m.gcode', 9.7, 1, '#b9763f', '1 h 20 min', 41),

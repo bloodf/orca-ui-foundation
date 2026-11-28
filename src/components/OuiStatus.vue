@@ -29,11 +29,16 @@ const GLYPH: Partial<Record<OuiState, OuiIconData>> = { warn: warning, error, of
 .oui-status[data-state='error'] { --oui-status: var(--oui-danger); --oui-status-bg: var(--oui-danger-bg); }
 .oui-status-label { overflow: hidden; text-overflow: ellipsis; }
 .oui-status-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-/* idle: a hollow ring. connecting: a turning arc. busy: a steady dot with a slow halo. */
+/* idle: a hollow ring. connecting: a turning arc. busy: a steady dot with a slow halo. The halo is a second disc behind
+   the dot that grows and fades: transform and opacity only, which the compositor animates by itself. (Up to 5.13 it was
+   an animated box-shadow, a style recalculation and a repaint on every frame of every busy chip, for a whole print.) */
 .oui-status[data-state='idle'] .oui-status-dot { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
 .oui-status[data-state='connecting'] .oui-status-dot { width: 10px; height: 10px; background: none; border: 1.5px solid currentColor; border-right-color: transparent;
   animation: oui-turn .9s linear infinite; }
-.oui-status[data-state='busy'] .oui-status-dot { animation: oui-halo 2s var(--oui-ease) infinite; }
+.oui-status[data-state='busy'] .oui-status-dot { position: relative; }
+.oui-status[data-state='busy'] .oui-status-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: currentColor; opacity: 0; pointer-events: none;
+  animation: oui-halo 2s var(--oui-ease) infinite; }
 @keyframes oui-turn { to { transform: rotate(1turn); } }
-@keyframes oui-halo { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 50%, transparent); } 70%, 100% { box-shadow: 0 0 0 5px transparent; } }
+@keyframes oui-halo { 0% { transform: scale(1); opacity: .5; } 70%, 100% { transform: scale(2.25); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .oui-status[data-state='busy'] .oui-status-dot::after { animation: none; } }
 </style>

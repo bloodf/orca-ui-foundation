@@ -2,7 +2,7 @@ import { reactive, readonly } from 'vue';
 
 /*
  * The page's toasts: short news about something that just happened ("Saved", "Spool linked", "Could not reach the
- * printer"). One host (OuiToastHost) draws them bottom-left, stacked, newest at the bottom. Every toast has a close
+ * printer"). One host (OuiToastHost) draws them bottom-right, stacked, newest at the bottom. Every toast has a close
  * button; info and success leave after 5 s, warnings and toasts with an action after 8 s, errors stay until closed.
  * A toast only counts down while someone can read it: the page is visible and has focus, and the toast is neither
  * hovered nor focused. Switching to another OrcaSlicer tab or app holds every timer; coming back resumes each with the
