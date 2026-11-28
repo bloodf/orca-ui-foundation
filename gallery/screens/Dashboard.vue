@@ -10,7 +10,8 @@ import { CAMERA, SPOOLS } from '../v5/data';
 // MOCK — 5.14: OuiDashboard with widgets of very different heights. Outside edit mode every column packs on its own:
 // the tall Filament card on the left does not stretch Temperatures, Controls or the camera beside it.
 // state: '' | 'edit' (edit mode: the frame's bar names the widget, the module's header is blank) | 'settings' (a widget's
-// settings, on the widget) | 'header' (the layout controls in the page header: editTo).
+// settings, on the widget) | 'header' (the layout controls in the page header: editTo) | 'lost' (editTo names nothing
+// on the page: the controls stay over the grid).
 const props = defineProps<{ state: string }>();
 const panel = (title: string, icon: I.OuiIconData, tone: OuiTone, body: () => VNodeChild, extra: Record<string, unknown> = {}) =>
   defineComponent(() => () => h(OuiPanel, { title, icon, tone, ...extra }, { default: body, actions: () => h(OuiWidgetMaximize) }), { props: ['config'] });
@@ -55,6 +56,6 @@ onMounted(() => {
     <OuiPageHeader title="Anycubic Kobra X" meta="192.168.1.50 · Firmware 2.0.2.8">
       <template #actions><span v-if="state === 'header'" id="dash-actions" /><Button :label="t('Rename', 'Renomear')" severity="secondary" text><template #icon><OuiIcon :icon="I.edit" :size="14" /></template></Button></template>
     </OuiPageHeader>
-    <OuiDashboard ref="dash" v-model="stored" :widgets="widgets" :defaults="defaults" :narrow-at="900" :edit-to="state === 'header' ? '#dash-actions' : undefined" />
+    <OuiDashboard ref="dash" v-model="stored" :widgets="widgets" :defaults="defaults" :narrow-at="900" :edit-to="state === 'header' ? '#dash-actions' : state === 'lost' ? '#not-on-this-page' : undefined" />
   </main>
 </template>

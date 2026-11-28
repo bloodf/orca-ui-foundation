@@ -49,7 +49,7 @@ export const SCENES = [
   // 5.14: the dashboard packs each column on its own (a tall card does not stretch its neighbours); edit mode, a widget's
   // settings on the widget, the layout controls in the page header, and the one column of a narrow window in narrowOrder.
   ...both('kobra-layout', '', [WIDE, [1400, 1000]]), ['kobra-layout', '', 'dark', 'en', 1400, 1000, 'full'], ['kobra-layout', '', 'dark', 'pt-BR', ...NARROW, 'full'],
-  ...both('kobra-layout', 'edit', [[1400, 1000]]), ...both('kobra-layout', 'settings', [[1400, 1000]]), ['kobra-layout', 'header', 'dark', 'en', 1400, 1000],
+  ...both('kobra-layout', 'edit', [[1400, 1000]]), ...both('kobra-layout', 'settings', [[1400, 1000]]), ['kobra-layout', 'header', 'dark', 'en', 1400, 1000], ['kobra-layout', 'lost', 'dark', 'en', 1400, 1000],
   // 5.14: settings with nothing to save, as one stacked page, and under a banner that leaves; the picker past its named swatches.
   ...both('kobra-settings', 'clean', [TAB]), ...both('kobra-settings', 'stack', [WIDE, TAB]), ['kobra-settings', 'stack', 'dark', 'en', 380, 700], ['kobra-settings', 'banner', 'dark', 'en', ...TAB],
   ['spool-pick', 'many', 'dark', 'en', ...TAB],
@@ -329,10 +329,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         // OuiFileBrowser: click, Shift-click, Ctrl-click, select all, arrows with Shift, Space, Ctrl+A, Escape, drag onto a folder, Delete with its confirmation.
         const got = await evaluate(`(async () => {
           const tick = () => new Promise(r => setTimeout(r, 60)); const out = [];
+          // 5.14: a row that is only looked at (a plain click) is aria-current, not aria-selected: count() is the ticked rows.
           const rows = () => [...document.querySelectorAll('.oui-files-row')]; const count = () => document.querySelectorAll('.oui-files-row[aria-selected="true"]').length;
+          const seen = () => document.querySelectorAll('.oui-files-row[aria-current]').length;
           const click = (el, o = {}) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, ...o }));
           const key = (el, k, o = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...o }));
-          click(rows()[0]); await tick(); out.push(count());
+          click(rows()[0]); await tick(); out.push(count() + 'look' + seen());
           click(rows()[3], { shiftKey: true }); await tick(); out.push(count());
           click(rows()[1], { ctrlKey: true }); await tick(); out.push(count());
           const head = document.querySelector('.oui-files-table thead input'); head.click(); await tick(); out.push(count()); head.click(); await tick(); out.push(count());
@@ -367,8 +369,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           out.push(document.querySelector('.oui-files-bar .p-button-danger')?.disabled ? 'no-delete' : 'DELETE-ON'); out.push(rows()[0].draggable ? 'DRAGGABLE' : 'fixed');
           out.push(document.querySelector('.oui-files-move')?.classList.contains('p-disabled') === false ? 'MOVE-ON' : 'no-move');
           key(rows()[0], 'Delete'); await wait(); out.push(document.querySelector('[data-dlg="confirm"]') ? 'ASKED' : 'not-asked');
+          // 5.14: with one file looked at and focus moved to another row, Delete asks about the row that has focus.
+          click(document.querySelector('[data-folder="local/gifts"]')); await wait(); click(rows()[0]); await tick(); const other = rows()[1]; other.focus(); key(other, 'ArrowDown'); await tick();
+          const focused = document.activeElement.querySelector('[title]')?.title, lookedAt = rows()[0].querySelector('[title]')?.title; key(document.activeElement, 'Delete'); await wait();
+          const named = [...document.querySelectorAll('.p-dialog .oui-files-names li')].map(li => li.textContent.trim());
+          out.push(named.length === 1 && named[0] === focused && focused !== lookedAt ? 'delete-is-for-the-focused-row' : 'DELETE-FOR ' + named.join('+') + ' focus ' + focused);
+          document.querySelector('[data-dlg="cancel"]')?.click(); await wait(); click(document.querySelector('[data-folder="camera"]')); await wait();
           return out.join(','); })()`);
-        if (got !== '1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,move-offered,not-a-target,3,1,look-only,1-ticked,no-delete,fixed,no-move,not-asked') bad.push('file browser interactions: ' + got);
+        if (got !== '0look1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,move-offered,not-a-target,3,0,look-only,1-ticked,no-delete,fixed,no-move,not-asked,delete-is-for-the-focused-row') bad.push('file browser interactions: ' + got);
       }
       if (screen === 'u1-files' && !state && width >= 1200 && lang === 'en') {
         // 5.2.0: "New folder" beside the path makes one in the open folder, named at the top of the list: a name that is refused says why
@@ -466,6 +474,27 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           if (Math.abs(camera.r.top - temps.r.bottom - 12) > 1.5 && Math.abs(camera.r.top - cells.find(c => c.id === 'controls').r.bottom - 12) > 1.5) bad.push('camera not under its column: ' + Math.round(camera.r.top));
           return bad.join('; '); })()`);
         if (got) bad.push('dashboard packing: ' + got);
+      }
+      if (screen === 'kobra-layout' && (state === 'header' || state === 'lost')) {
+        // 5.14, editTo: the layout controls sit in the page header's actions; a target that is not on the page leaves them over the grid.
+        const got = await evaluate(`[document.querySelector('.oui-pagehead-actions [data-test="dash-edit"]') ? 'in-header' : 'not-in-header', document.querySelector('.oui-dash-board [data-test="dash-edit"]') ? 'over-grid' : 'not-over-grid'].join()`);
+        if (got !== (state === 'header' ? 'in-header,not-over-grid' : 'not-in-header,over-grid')) bad.push('dashboard editTo: ' + got);
+      }
+      if (screen === 'kobra-layout' && state === 'edit') {
+        // 5.14: the layout menu is a menu button (it opens, names its items, and its own click closes it again); a widget's
+        // content growing outside edit mode moves what is under it without a ResizeObserver loop.
+        const got = await evaluate(`(async () => { const tick = ms => new Promise(r => setTimeout(r, ms)); const out = []; const errors = []; addEventListener('error', e => errors.push(e.message));
+          const b = document.querySelector('[data-test="dash-menu"]'); b.click(); await tick(80);
+          out.push(b.getAttribute('aria-expanded') === 'true' && document.querySelector('.oui-menu[aria-label]') ? 'open' : 'NOT-OPEN'); out.push(document.querySelectorAll('.oui-menu [role=menuitem]').length);
+          b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); b.click(); await tick(80); out.push(!document.querySelector('.oui-menu') && b.getAttribute('aria-expanded') === 'false' ? 'closed-by-its-button' : 'STILL-OPEN');
+          document.querySelector('[data-test="dash-cancel"]').click(); await tick(300);
+          const box = id => document.querySelector('.oui-dash-cell[data-widget="' + id + '"]').getBoundingClientRect();
+          const before = box('camera').top; const body = document.querySelector('.oui-dash-cell[data-widget="controls"] .oui-panel-body'); const more = document.createElement('p'); more.style.height = '90px'; body.append(more); await tick(300);
+          // The camera is under Temperatures and Controls: it sits 12 px under the taller of the two, now Controls.
+          const under = Math.max(box('temps').bottom, box('controls').bottom) + 12;
+          out.push(box('camera').top > before + 1 && Math.abs(box('camera').top - under) < 1.5 ? 'neighbour-follows' : 'CAMERA at ' + Math.round(box('camera').top) + ', not ' + Math.round(under)); out.push(errors.length ? 'ERRORS ' + errors.join(' / ') : 'no-loop');
+          return out.join(','); })()`);
+        if (got !== 'open,3,closed-by-its-button,neighbour-follows,no-loop') bad.push('dashboard edit: ' + got);
       }
       if (screen.endsWith('-dash') || screen === 'calc-quote') {
         // 5.14, OuiAppBar: no tab is ever cut or scrolled out of reach, at any width.

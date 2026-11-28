@@ -81,5 +81,6 @@ watch(() => toastList.list.map(t => t.id), (ids) => {
 .oui-toasts[data-position='bottom-left'] :is(.oui-toast-enter-from, .oui-toast-leave-to) { transform: translateX(-12px); }
 .oui-toast-leave-active { position: absolute; width: 100%; }
 .oui-toast-move { transition: transform var(--oui-base) var(--oui-ease); }
-@media (prefers-reduced-motion: reduce) { .oui-toast-enter-active, .oui-toast-leave-active, .oui-toast-move { transition: none; } .oui-toast-enter-from, .oui-toast-leave-to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .oui-toast-enter-active, .oui-toast-leave-active, .oui-toast-move { transition: none; }
+  .oui-toasts[data-position] :is(.oui-toast-enter-from, .oui-toast-leave-to) { transform: none; } }
 </style>

@@ -36,16 +36,17 @@ import { chevronDown, chevronRight, file as fileIcon, files as filesIcon, folder
  * Folders are shown in the tree only; the table lists files. What can be done to the open folder itself (rename it,
  * move it, delete it, make a folder in it) is the page's, in `#folder`, which gets that folder and sits beside the path.
  *
- * Looking and selecting are two gestures. A click on a row looks at that file: the row is marked and the detail shows
- * it with its own actions, but its box is not ticked and the bar offers nothing (reading a file's details never arms
- * Delete). The checkbox, Cmd/Ctrl-click and Space select: add or remove one; Shift-click (and Shift with the arrows)
+ * Looking and selecting are two gestures. A click on a row looks at that file: the row is marked (`aria-current`, not
+ * `aria-selected`) and the detail shows it with its own actions, but its box is not ticked and the bar offers nothing
+ * (reading a file's details never arms Delete; the Delete key acts on the row that has focus). The checkbox, Cmd/Ctrl-click and Space select: add or remove one; Shift-click (and Shift with the arrows)
  * selects the range from the last one; the header checkbox and Cmd/Ctrl+A select all; Escape clears. For the page both
  * are `selected` (v-model): the file looked at is a selection of one.
  *
  * `columns` adds columns between the name and the size (a print's time, its filament): each file gives their text in
  * `cells`. They are plain text, not sorted, and step aside under 1100 px (880 px without a tree), where the name needs
  * the room. `viewToggle` false leaves out the list/grid switch for a storage with no pictures to show in a grid.
- * An empty folder is one centred sentence: no header row, no "0 files".
+ * An empty folder is one centred sentence: no header row over it, and its "0 files" is said to screen readers only (the
+ * bar stays, so the list/grid switch does, and nothing jumps when a folder empties).
  * Moving: drag the selection onto a folder in the tree, or use "Move to" in the bar over the table, which does the
  * same from the keyboard. Deleting always asks first (OuiConfirm), with the count and the first names.
  * Keys in the table: arrows, Home, End, Space (toggle), Enter (open), Delete. In the tree: arrows, Home, End,
@@ -212,7 +213,8 @@ function onTableKey(event: KeyboardEvent) {
     case 'Enter': emit('open', ids[at]); break;
     case 'Escape': setSelected([]); break;
     // props.selected is not updated yet when the row was selected just now: say which files, do not read them back.
-    case 'Delete': case 'Backspace': if (props.selected.length) askDelete(); else { setSelected([ids[at]]); anchor.value = ids[at]; askDelete([ids[at]]); } break;
+    // With files ticked, Delete is for them; otherwise for the row that has focus (a file only looked at is not armed).
+    case 'Delete': case 'Backspace': if (ticked.value) askDelete(); else { look(ids[at]); askDelete([ids[at]]); } break;
     default: return;
   }
   event.preventDefault();
@@ -528,8 +530,8 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
         <div v-if="$slots.toolbar" class="oui-files-tools"><slot name="toolbar" /></div>
       </div>
       <!-- Always there, so selecting does not move the table: the count, and what can be done with the selection. -->
-      <div v-if="!blank" class="oui-files-bar" role="toolbar" :aria-label="labels.selected(ticked)">
-        <span class="oui-num oui-strong" aria-live="polite">{{ ticked ? labels.selected(ticked) : labels.items(rows.length) }}</span>
+      <div class="oui-files-bar" :class="{ 'oui-sr': blank && !viewToggle }" role="toolbar" :aria-label="ticked ? labels.selected(ticked) : labels.files">
+        <span class="oui-num oui-strong" :class="{ 'oui-sr': blank }" aria-live="polite">{{ ticked ? labels.selected(ticked) : labels.items(rows.length) }}</span>
         <template v-if="ticked">
           <Button :label="labels.clear" severity="secondary" text size="small" @click="setSelected([])"><template #icon><OuiIcon :icon="closeIcon" :size="13" /></template></Button>
           <span class="oui-spacer" />
@@ -561,7 +563,7 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
               :readonly="editing.busy" :aria-busy="editing.busy || undefined" :aria-invalid="!!editing.error || undefined" :aria-describedby="editing.error ? 'oui-files-nameerror' : undefined" maxlength="300"
               @keydown="onFieldKey" @input="editing.error = ''" @blur="onFieldBlur" @click.stop @dblclick.stop @pointerdown.stop>
               <span v-if="editing.error" id="oui-files-nameerror" class="oui-files-nameerror" role="alert">{{ editing.error }}</span></span></div></td></tr>
-            <tr v-for="f in rows" :key="f.id" class="oui-files-row" :data-file="f.id" :aria-selected="picked.has(f.id)" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1"
+            <tr v-for="f in rows" :key="f.id" class="oui-files-row" :data-file="f.id" :aria-selected="picked.has(f.id) && !looking" :aria-current="(looking && looked === f.id) || undefined" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1"
               :data-dragged="dragging.includes(f.id) || undefined" @click="onRowClick($event, f.id)" @dblclick="emit('open', f.id)" @focus="rowFocus = f.id" @pointerdown="onRowPointerDown($event, f.id)" @contextmenu="onFileMenu($event, f.id)" @dragstart.prevent>
               <td class="oui-files-check" @click.stop><input type="checkbox" tabindex="-1" :checked="picked.has(f.id) && !looking" :aria-label="labels.select(f.name)" @click="onCheck($event, f.id)"></td>
               <td><div class="oui-files-name"><OuiThumb :src="f.thumb" :size="32" :icon="fileIcon" /><template v-if="editing?.op === 'rename' && editing.id === f.id"><span class="oui-files-newname"><input :ref="onField" v-model="editing.name" class="p-inputtext p-inputtext-sm" data-files-newname :aria-label="labels.folderName ?? labels.newFolder ?? 'Name'"
@@ -581,7 +583,7 @@ onUpdated(() => { if (hadFocus) holdFocus(); hadFocus = false; });
               :readonly="editing.busy" :aria-busy="editing.busy || undefined" :aria-invalid="!!editing.error || undefined" :aria-describedby="editing.error ? 'oui-files-nameerror' : undefined" maxlength="300"
               @keydown="onFieldKey" @input="editing.error = ''" @blur="onFieldBlur" @click.stop @dblclick.stop @pointerdown.stop>
               <span v-if="editing.error" id="oui-files-nameerror" class="oui-files-nameerror" role="alert">{{ editing.error }}</span></span></div>
-            <div v-for="f in rows" :key="f.id" role="row" class="oui-files-row oui-files-card" :title="f.name" :data-file="f.id" :aria-selected="picked.has(f.id)" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1"
+            <div v-for="f in rows" :key="f.id" role="row" class="oui-files-row oui-files-card" :title="f.name" :data-file="f.id" :aria-selected="picked.has(f.id) && !looking" :aria-current="(looking && looked === f.id) || undefined" :tabindex="(rowFocus ?? rows[0].id) === f.id ? 0 : -1"
               :data-dragged="dragging.includes(f.id) || undefined" @click="onRowClick($event, f.id)" @dblclick="emit('open', f.id)" @focus="rowFocus = f.id" @pointerdown="onRowPointerDown($event, f.id)" @contextmenu="onFileMenu($event, f.id)" @dragstart.prevent>
               <span role="gridcell" class="oui-files-cardpic"><img v-if="f.thumb" :src="f.thumb" alt="" draggable="false" loading="lazy"><OuiIcon v-else :icon="fileIcon" :size="40" /></span>
               <span role="gridcell" class="oui-files-cardtext"><template v-if="editing?.op === 'rename' && editing.id === f.id"><span class="oui-files-newname"><input :ref="onField" v-model="editing.name" class="p-inputtext p-inputtext-sm" data-files-newname :aria-label="labels.folderName ?? labels.newFolder ?? 'Name'"
@@ -711,7 +713,8 @@ html[data-oui-drag='refused'], html[data-oui-drag='refused'] * { cursor: not-all
 .oui-files-row { cursor: default; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
 .oui-files-row img { -webkit-user-drag: none; }
 .oui-files-row:hover { background: var(--oui-raised); }
-.oui-files-row[aria-selected='true'] { background: var(--oui-primary-soft); }
+/* Ticked rows, and the one row being looked at (its details are in the pane beside the list). */
+.oui-files-row:is([aria-selected='true'], [aria-current]) { background: var(--oui-primary-soft); }
 .oui-files-row[data-dragged], .oui-files-folder[data-dragged] { opacity: .5; }
 .orca-ui .oui-files-row:focus-visible { outline-offset: -2px; }
 .oui-files-name { display: flex; align-items: center; gap: var(--oui-s2); min-width: 0; }

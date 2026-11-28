@@ -5,14 +5,17 @@
  */
 export async function copyText(text: string, select?: HTMLElement | null): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { /* refused: try the old way */ }
+  // The hidden field takes focus to be copied from: it goes back to where it was (the Copy button), not to the page.
+  const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   try {
     const field = document.createElement('textarea');
     field.value = text; field.setAttribute('readonly', ''); field.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
     document.body.appendChild(field); field.select();
     const ok = document.execCommand('copy');
     field.remove();
+    back?.focus({ preventScroll: true });
     if (ok) return true;
-  } catch { /* not there either */ }
+  } catch { back?.focus({ preventScroll: true }); /* not there either */ }
   const selection = select && getSelection();
   if (select && selection) { const range = document.createRange(); range.selectNodeContents(select); selection.removeAllRanges(); selection.addRange(range); }
   return false;

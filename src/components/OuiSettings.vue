@@ -150,7 +150,8 @@ function watchAround() {
   for (let node: HTMLElement | null = root.value; node && node !== document.documentElement; node = node.parentElement) {
     const parent: HTMLElement | null = node.parentElement;
     if (!parent) break;
-    around?.observe(parent, { childList: true });
+    // Not <body>'s own children: what comes and goes there is overlays (a Select's list, a dialog), which move nothing.
+    if (parent !== document.body) around?.observe(parent, { childList: true });
     sizes.observe(parent);
     for (const sibling of Array.from(parent.children)) if (sibling !== node) sizes.observe(sibling);
   }
@@ -200,7 +201,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </nav>
-    <div id="oui-settings-panel" ref="body" class="oui-settings-body" :role="layout === 'stack' ? undefined : 'tabpanel'" :aria-labelledby="layout === 'stack' ? undefined : 'oui-settings-tab-' + current"
+    <div id="oui-settings-panel" ref="body" class="oui-settings-body" :role="layout === 'stack' ? 'region' : 'tabpanel'" :aria-labelledby="layout === 'stack' ? undefined : 'oui-settings-tab-' + current"
       :aria-label="layout === 'stack' ? navLabel : undefined" tabindex="-1"><slot /></div>
     <footer v-if="$slots.footer" ref="foot" class="oui-settings-foot"><slot name="footer" /></footer>
   </div></div>

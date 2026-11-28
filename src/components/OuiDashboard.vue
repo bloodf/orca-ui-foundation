@@ -17,7 +17,7 @@ export interface OuiDashboardLabels {
   removeAsk: (name: string) => string; nameEmpty: string; nameTaken: string; settings: (widget: string) => string; removeWidget: (widget: string) => string;
   widget: (widget: string) => string; place: (widget: string, x: number, y: number, w: number, h: number) => string; removed: (widget: string) => string;
   hint: string; narrow: string; empty: string; maximize: string; restore: string;
-  /** The button that opens New, Rename and Delete layout. */ layoutMenu: string;
+  /** The button that opens New, Rename and Delete layout (5.14; optional so a page's full set of 5.13 labels still type-checks). */ layoutMenu?: string;
 }
 export const OUI_DASHBOARD_LABELS: OuiDashboardLabels = {
   toolbar: 'Dashboard layout', layout: 'Layout', edit: 'Edit layout', save: 'Save layout', cancel: 'Cancel', add: 'Add widget', addTitle: 'Widgets', added: 'On the dashboard', close: 'Close',
@@ -34,7 +34,7 @@ export type { OuiDashboardState, OuiLayoutItem, OuiWidgetValue };
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch, type RendererElement } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, provide, ref, shallowRef, watch, type RendererElement } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -103,6 +103,18 @@ function closeSettings() {
   strip.value = null;
   if (id) void nextTick(() => grid.value?.querySelector<HTMLElement>(`[data-settings="${CSS.escape(id)}"]`)?.focus());
 }
+// `editTo`: where the bar goes while the dashboard is not edited. A selector that matches nothing (or an element that has
+// left the page) leaves the bar where it is, over the grid, instead of nowhere. The target has to stay in the page.
+const away = shallowRef<RendererElement | null>(null);
+function resolveAway() {
+  const to = props.editTo;
+  let el: RendererElement | null = null;
+  if (typeof to === 'string') { try { el = document.querySelector(to); } catch { el = null; } } else el = to ?? null;
+  const next = el && (el as Element).isConnected !== false ? el : null;
+  if (next !== away.value) away.value = next;
+}
+watch(() => props.editTo, () => void nextTick(resolveAway));
+onUpdated(resolveAway);
 // New, Rename and Delete layout sit in one menu beside the layout Select.
 const menu = ref<InstanceType<typeof OuiMenu>>();
 const layoutItems = computed<OuiMenuItem[]>(() => [
@@ -148,8 +160,9 @@ let frame = 0;
 onMounted(() => {
   ro = new ResizeObserver(([e]) => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { width.value = e.contentRect.width; }); });
   if (grid.value) ro.observe(grid.value);
-  cellSizes = new ResizeObserver(measure);
+  cellSizes = new ResizeObserver(remeasure);
   watchCells();
+  resolveAway();
 });
 const narrow = computed(() => width.value < props.narrowAt);
 watch(narrow, n => { if (n && editing.value) stopEdit(); });
@@ -169,6 +182,10 @@ const rowsPx = (h: number) => h * ROW + (h - 1) * GAP;
 const heights = ref<Record<string, number>>({});
 const tops = computed(() => packTops(items.value, it => (def(it.id)?.fill ? rowsPx(it.h) : heights.value[it.id] ?? rowsPx(it.h)), GAP));
 let cellSizes: ResizeObserver | undefined;
+// Measured on the next frame, not inside the observer's own callback: the margins that follow change the grid's height,
+// which the browser would report as a ResizeObserver loop.
+let measureFrame = 0;
+const remeasure = () => { cancelAnimationFrame(measureFrame); measureFrame = requestAnimationFrame(measure); };
 function measure() {
   if (!packed.value || !grid.value) return;
   const next: Record<string, number> = {};
@@ -258,7 +275,7 @@ function onUp(event: PointerEvent) {
 }
 function onCancel(event: PointerEvent) { if (op && event.pointerId === op.pointer) end(); }
 function onEscape(event: KeyboardEvent) { if (event.key === 'Escape' && op) { event.preventDefault(); event.stopPropagation(); end(); } }
-onBeforeUnmount(() => { if (op) end(); ro?.disconnect(); cellSizes?.disconnect(); cancelAnimationFrame(frame); });
+onBeforeUnmount(() => { if (op) end(); ro?.disconnect(); cellSizes?.disconnect(); cancelAnimationFrame(frame); cancelAnimationFrame(measureFrame); });
 
 // The keyboard does the same on a focused widget frame: arrows move by one column or row (up and down past the
 // neighbour, since widgets rise), Shift and arrows resize, Delete removes.
@@ -305,12 +322,13 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
 <template>
   <div class="oui-dash-board" :data-editing="editing || undefined">
     <!-- While the dashboard is not edited, the bar (the layout Select and Edit layout) can live in the page header (editTo). -->
-    <Teleport :to="editTo" :disabled="!editTo || editing" defer>
-      <div class="oui-dash-bar" :data-away="(!!editTo && !editing) || undefined" role="toolbar" :aria-label="L.toolbar">
+    <Teleport :to="away" :disabled="!away || editing">
+      <div class="oui-dash-bar" :data-away="(!!away && !editing) || undefined" role="toolbar" :aria-label="L.toolbar">
         <Select v-if="options.length > 1 || editing" :model-value="state.active" :options="options" option-label="label" option-value="value" size="small"
                 :aria-label="L.layout" :disabled="dirty" class="oui-dash-pick" data-test="dash-layout" @update:model-value="choose" />
         <template v-if="editing">
-          <Button severity="secondary" text size="small" :aria-label="L.layoutMenu" :title="L.layoutMenu" aria-haspopup="menu" data-test="dash-menu" @click="menu?.open($event, layoutItems)">
+          <Button severity="secondary" text size="small" :aria-label="L.layoutMenu" :title="L.layoutMenu" aria-haspopup="menu" :aria-expanded="menu?.isOpen ?? false" data-test="dash-menu"
+                  @click="menu?.isOpen ? menu.close(true) : menu?.open($event, layoutItems)">
             <template #icon><OuiIcon :icon="more" :size="14" /></template></Button>
           <Button severity="secondary" text size="small" :label="L.reset" data-test="dash-reset" @click="resetLayout">
             <template #icon><OuiIcon :icon="undo" :size="14" /></template></Button>
@@ -370,7 +388,7 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
           </span>
           <!-- The widget's settings, on the widget, under its gear: nothing above the grid moves. -->
           <div v-if="settingsFor?.id === it.id" class="oui-dash-pop" role="group" :aria-label="L.settings(titleOf(it.id))" :data-side="it.x + it.w / 2 < COLS / 2 ? 'start' : 'end'" data-test="dash-settings"
-               @pointerdown.stop @keydown.stop @keydown.escape.prevent="closeSettings">
+               @pointerdown.stop @keydown.escape.prevent="closeSettings">
             <p class="oui-strong">{{ L.settings(titleOf(it.id)) }}</p>
             <template v-for="s in def(it.id).settings" :key="s.key">
               <div v-if="s.options" class="oui-dash-set-row" data-kind="choice"><span>{{ s.label }}</span>
@@ -385,7 +403,7 @@ defineExpose({ edit: startEdit, save: saveEdit, cancel: stopEdit });
         </div>
       </div>
     </div>
-    <OuiMenu ref="menu" />
+    <OuiMenu ref="menu" :label="L.layoutMenu" />
     <div class="oui-sr" aria-live="polite">{{ said }}</div>
   </div>
 </template>

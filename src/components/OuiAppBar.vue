@@ -107,11 +107,13 @@ function onKey(event: KeyboardEvent) {
 .oui-appbar-status > :not(.oui-status) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .oui-appbar-actions { flex: none; display: flex; align-items: center; gap: var(--oui-s2); }
 /* Not everything fits one line (see the script): identity, state and actions on the first, the tabs on their own. The
-   state stays on the first line and gives way there: its text ends in an ellipsis, then its chip does. */
-.oui-appbar-row[data-stacked] { flex-wrap: wrap; }
-.oui-appbar-row[data-stacked] > :is(.oui-appbar-id, .oui-appbar-status, .oui-appbar-actions) { min-height: 40px; }
-.oui-appbar-row[data-stacked] > .oui-appbar-status { flex: 999 1 0; }
-.oui-appbar-row[data-stacked] > .oui-appbar-status > .oui-status { flex: 0 1 auto; }
-.oui-appbar-row[data-stacked] > .oui-appbar-tabs { order: 5; flex: 1 0 100%; flex-wrap: wrap; min-width: 0; margin-inline: -10px; box-shadow: inset 0 1px 0 var(--oui-border); }
-.oui-appbar-row[data-stacked] .oui-appbar-tab { min-height: 36px; }
+   state stays on the first line and gives way there: its text ends in an ellipsis, then its chip does.
+   The condition is in :where(), so these weigh what the one-line rules above weigh: a page's own rules for its bar (the
+   state on a line of its own in a very narrow window, say), written for the 760 px breakpoint of 5.13, still win. */
+:where(.oui-appbar-row[data-stacked]) { flex-wrap: wrap; }
+:where(.oui-appbar-row[data-stacked]) > :is(.oui-appbar-id, .oui-appbar-status, .oui-appbar-actions) { min-height: 40px; }
+:where(.oui-appbar-row[data-stacked]) > .oui-appbar-status { flex: 999 1 0; }
+:where(.oui-appbar-row[data-stacked] > .oui-appbar-status) > .oui-status { flex: 0 1 auto; }
+:where(.oui-appbar-row[data-stacked]) > .oui-appbar-tabs { order: 5; flex: 1 0 100%; flex-wrap: wrap; min-width: 0; margin-inline: -10px; box-shadow: inset 0 1px 0 var(--oui-border); }
+:where(.oui-appbar-row[data-stacked]) .oui-appbar-tab { min-height: 36px; }
 </style>
