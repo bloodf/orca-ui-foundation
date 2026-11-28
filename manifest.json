@@ -1,12 +1,12 @@
 {
-  "version": "5.13.1",
+  "version": "5.13.2",
   "dependencies": {
     "@primeuix/themes": "3.1.1",
-    "primevue": "5.0.6",
+    "primevue": "^5.0.5",
     "vue": "3.5.46"
   },
   "files": {
-    "src/index.ts": "5593ed596e0300967e57d498326223ea254c5f704fcf0eaec8011707e335c4a0",
+    "src/index.ts": "b247a1efead48fd6174d4d5bdcd89a7acbc22cc3b6448932bd0d600aaea5e07c",
     "src/license.ts": "f2c83aeec15ac664d478bf5258bc1864ccf2dfe6d2bd4ab826596b118b630f89",
     "src/theme.ts": "a8dc165577f04362b5e7d8601549fd146e5087e90cc2feb1f113f97318eb2d79",
     "src/palette.json": "3cd24ad437b8937db36b0201674e3c54f7b30d0dd751ba587b69918fb20b522c",
@@ -70,8 +70,8 @@
     "src/assets/spool/n7-fio.webp": "ded28c578f6db79dabcaad74d66d9fd87d29357365e6029c6df70b782817d1a9",
     "src/assets/spool/n8-corpo.webp": "b0653853a32d321e34611171d81e1cc9f437efb542f06c2da7361d8dc7f88eaf",
     "python/filmatch.py": "66e4dc77dd4a8c64bdcf459bd93b2ccf8e4bd1086fea8c2ba3db638325981a8f",
-    "package.json": "3640aede879032bea2b3ced87d8a69b8aa743b37c954627bc4b1cb74cb261f42",
-    "package-lock.json": "bff1d6839696c078fe3680948ad60da0a72cb203b53d4dccc1f579497f1505e0",
+    "package.json": "2f1da705e1dcd916dbe3f70ad8a833013b9ca3864cadbc92494f663e91073f56",
+    "package-lock.json": "1053fb1f431e51ed6c7d9e9fee9117c06f45b15d24a1bfe2947e1f714e3aa0bf",
     "scripts/check.mjs": "1cedec7f8a1768b4e3c01dcbdde1a5f5bd652e750ac448b7408bd0ee8cce183f",
     "scripts/vue-tsc.mjs": "5c3fe9ba1f0e824dda0fc987836bcdf47401fe6cbce39012e2935d1e7437fd68",
     "README.md": "14e9817e593bfe9c112f5577f928bbd2298d0a3871c0a7f22f37d3e6ca3b8dda",
