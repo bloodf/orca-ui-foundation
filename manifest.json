@@ -2,7 +2,7 @@
   "version": "5.13.0",
   "dependencies": {
     "@primeuix/themes": "3.1.1",
-    "primevue": "5.0.5",
+    "primevue": "5.0.6",
     "vue": "3.5.46"
   },
   "files": {
@@ -70,8 +70,8 @@
     "src/assets/spool/n7-fio.webp": "ded28c578f6db79dabcaad74d66d9fd87d29357365e6029c6df70b782817d1a9",
     "src/assets/spool/n8-corpo.webp": "b0653853a32d321e34611171d81e1cc9f437efb542f06c2da7361d8dc7f88eaf",
     "python/filmatch.py": "66e4dc77dd4a8c64bdcf459bd93b2ccf8e4bd1086fea8c2ba3db638325981a8f",
-    "package.json": "e1e0a6e5863a6af1fa909b445f7fcf1c7ff27b9c3341212142ee441eb20e2f6b",
-    "package-lock.json": "514bd4c1f43d32fbda40898e7f0412a56f5864923422f048d1e9071c4b96dea7",
+    "package.json": "4de7048d2013b2ea809c68862075bb4516108c922f8495b6fc8a799c80662fc5",
+    "package-lock.json": "992d13a7451f64726d8e0c33da368efbf497b132711fc54d1325061056088b17",
     "scripts/check.mjs": "1cedec7f8a1768b4e3c01dcbdde1a5f5bd652e750ac448b7408bd0ee8cce183f",
     "scripts/vue-tsc.mjs": "5c3fe9ba1f0e824dda0fc987836bcdf47401fe6cbce39012e2935d1e7437fd68",
     "README.md": "14e9817e593bfe9c112f5577f928bbd2298d0a3871c0a7f22f37d3e6ca3b8dda",
