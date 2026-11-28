@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@primeuix/themes": "3.1.1",
-    "primevue": "5.0.5",
+    "primevue": "5.0.6",
     "vue": "3.5.46"
   },
   "devDependencies": {
@@ -31,7 +31,7 @@
     "@typescript/typescript6": "6.0.2",
     "@vitejs/plugin-vue": "6.0.11",
     "lucide-static": "1.82.0",
-    "primevue": "5.0.5",
+    "primevue": "5.0.6",
     "typescript": "7.0.2",
     "vite": "8.4.0",
     "vite-plugin-singlefile": "2.3.4",
