@@ -46,6 +46,17 @@ export const SCENES = [
   // 5.13: the colour-first spool picker, and the dialog of one colour's spools.
   ...both('spool-pick', '', [TAB]), ...both('spool-pick', 'dialog', [TAB]), ['spool-pick', '', 'dark', 'pt-BR', 380, 700], ['spool-pick', 'dialog', 'light', 'pt-BR', 380, 700],
   ...['dark', 'light'].flatMap(theme => [['notices', '', theme, 'en', 1280, 720, 'toasts'], ['notices', '', theme, 'pt-BR', 380, 700, 'toasts']]),
+  // 5.14: the dashboard packs each column on its own (a tall card does not stretch its neighbours); edit mode, a widget's
+  // settings on the widget, the layout controls in the page header, and the one column of a narrow window in narrowOrder.
+  ...both('kobra-layout', '', [WIDE, [1400, 1000]]), ['kobra-layout', '', 'dark', 'en', 1400, 1000, 'full'], ['kobra-layout', '', 'dark', 'pt-BR', ...NARROW, 'full'],
+  ...both('kobra-layout', 'edit', [[1400, 1000]]), ...both('kobra-layout', 'settings', [[1400, 1000]]), ['kobra-layout', 'header', 'dark', 'en', 1400, 1000], ['kobra-layout', 'lost', 'dark', 'en', 1400, 1000],
+  // 5.14: settings with nothing to save, as one stacked page, and under a banner that leaves; the picker past its named swatches.
+  ...both('kobra-settings', 'clean', [TAB]), ...both('kobra-settings', 'stack', [WIDE, TAB]), ['kobra-settings', 'stack', 'dark', 'en', 380, 700], ['kobra-settings', 'banner', 'dark', 'en', ...TAB],
+  ['spool-pick', 'many', 'dark', 'en', ...TAB],
+  // 5.14: the whole kit sheet, for the parts under the fold (preset match, saved copy, rows, the plain table, empty slots).
+  ...['dark', 'light'].map(theme => ['kit', '', theme, 'en', 1400, 1000, 'full']),
+  // 5.14: the app bar never cuts a tab: between the widths where everything fits and where nothing does.
+  ...[1100, 1000, 900, 761, 400].map(w => ['u1-dash', '', 'dark', 'en', w, 720]), ['calc-quote', '', 'light', 'en', 900, 720], ['calc-quote', '', 'dark', 'pt-BR', 1000, 720],
 ];
 // A trailing 'system' renders without the optional brand face, for comparison.
 export const sceneName = ([screen, state, theme, lang, w, h, zoom]) => `MOCK-${screen}${state ? '-' + state : ''}-${theme}-${lang}-${w}x${h}${zoom === 'system' ? '-systemfont' : typeof zoom === 'string' ? '-' + zoom : zoom ? '-zoom' + zoom * 100 : ''}.png`;
@@ -62,9 +73,12 @@ const near = (a, b) => a.length === 3 && b.length === 3 && a.every((v, i) => Mat
 const FOOT = `(() => { const f = document.querySelector('.oui-settings-foot'); if (!f) return 'no save bar'; const r = f.getBoundingClientRect();
   const hit = document.elementFromPoint(r.left + r.width / 2, Math.min(innerHeight - 2, r.top + r.height / 2));
   const shown = [...document.querySelectorAll('.oui-settings-body .oui-formsection')].filter(e => e.offsetParent).length;
+  // One section at a time; every one of them stacked (layout="stack"); none while a narrow page shows its list of pages.
+  const all = document.querySelectorAll('.oui-settings-body .oui-formsection').length;
+  const want = document.querySelector('.oui-settings-grid[data-layout="stack"]') ? all : document.querySelector('.oui-settings-body').offsetParent ? 1 : 0;
   return r.bottom > innerHeight + 0.5 || r.top < 0 ? 'save bar off screen ' + Math.round(r.top) + '..' + Math.round(r.bottom) + ' of ' + innerHeight
     : !(hit && f.contains(hit)) ? 'save bar covered' : document.documentElement.scrollHeight > innerHeight + 1 ? 'page scrolls as well as the section'
-    : shown !== 1 ? shown + ' sections shown'
+    : shown !== want ? shown + ' sections shown, not ' + want
     : [...document.querySelectorAll('.oui-toast')].some(t => t.getBoundingClientRect().bottom > r.top + 0.5) ? 'a toast under the save bar' : ''; })()`;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -132,7 +146,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         }
       }
       if (option === 'toasts') {
-        // 4.2.0: the stack is bottom-left inside the window; every toast and dismissible banner has a named close button;
+        // 5.14: the stack is bottom-right inside the window (4.2.0 to 5.13: bottom-left); every toast and dismissible banner has a named close button;
         // errors are alerts, the rest status.
         const t = await evaluate(`(() => { const host = document.querySelector('.oui-toasts'); const r = host && host.getBoundingClientRect(); const cards = [...document.querySelectorAll('.oui-toast')];
           const last = cards.at(-1)?.getBoundingClientRect();
@@ -140,7 +154,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
             closes: cards.filter(c => c.querySelector('button.oui-toast-close[aria-label]')).length,
             roles: cards.map(c => c.dataset.toastTone + ':' + c.getAttribute('role')).join(','),
             banners: document.querySelectorAll('.oui-banner').length, bannerCloses: document.querySelectorAll('.oui-banner .oui-banner-close[aria-label]').length }; })()`);
-        if (!t.n || t.left > 24 || t.right > width - 8 || t.bottom > 24 || t.bottom < 0) bad.push('toast stack not bottom-left: ' + JSON.stringify(t));
+        if (!t.n || t.left < 8 || t.right < width - 24 || t.right > width - 8 || t.bottom > 24 || t.bottom < 0) bad.push('toast stack not bottom-right: ' + JSON.stringify(t));
         if (t.closes !== t.n) bad.push('a toast without a close button: ' + JSON.stringify(t));
         if (!/error:alert/.test(t.roles) || /(info|success|warn):alert/.test(t.roles)) bad.push('toast roles: ' + t.roles);
         if (t.bannerCloses !== t.banners) bad.push('a banner without a close button');
@@ -174,8 +188,16 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           b().querySelector('.oui-banner-close').click(); await sleep(50); out.push(b() ? 'BANNER-NOT-CLOSED' : 'banner-closed');
           n.spoolmanDown.value = false; await sleep(50); n.spoolmanDown.value = true; await sleep(50);
           out.push(b() ? 'banner-back' : 'BANNER-NOT-BACK');
+          // 5.14: a banner with a delay never shows for a state that is over sooner, and shows for one that lasts.
+          const w = () => document.querySelector('[data-test="banner-waiting"]');
+          n.waiting.value = true; await sleep(120); out.push(w() ? 'FLASHED' : 'held-back'); n.waiting.value = false; await sleep(350); out.push(w() ? 'SHOWN-AFTER-OVER' : 'never-shown');
+          n.waiting.value = true; await sleep(450); out.push(w() ? 'shown-when-lasting' : 'NOT-SHOWN'); n.waiting.value = false; await sleep(50); out.push(w() ? 'STAYED' : 'gone');
+          // 5.14: raw error text is behind a closed disclosure, not in the sentence.
+          const d = document.querySelector('[data-test="banner-details"] details');
+          out.push(d && !d.open && !d.querySelector('.oui-details-text').checkVisibility() ? 'details-closed' : 'DETAILS-OPEN');
+          d.querySelector('summary').click(); await sleep(50); out.push(d.open && /KeyError/.test(d.querySelector('.oui-details-text').textContent) && d.querySelector('.oui-details-text').checkVisibility() ? 'details-open' : 'DETAILS-NOT-SHOWN');
           return out.join(','); })()`);
-        if (clock !== 'held-on-blur,held-when-hidden,resumed,gone-after-remaining,error-stays,banner-closed,banner-back') bad.push('toast clock / banner condition: ' + clock);
+        if (clock !== 'held-on-blur,held-when-hidden,resumed,gone-after-remaining,error-stays,banner-closed,banner-back,held-back,never-shown,shown-when-lasting,gone,details-closed,details-open') bad.push('toast clock / banner condition: ' + clock);
       }
       // 5.0.2: every (i) on the page, closed and then open. A closed bubble takes no room (the page is no wider than the
       // window); an open one is wholly inside the window, wherever its button is, and does not widen the page either.
@@ -229,7 +251,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           return t.left - b.left > 20 || b.right - t.right > 20 ? 'toolbar slot at ' + Math.round(t.left - b.left) + '..' + Math.round(b.right - t.right) + ' from the ends' : ''; })()`);
         if (bar) bad.push(bar);
         // 5.0.3: the last column holds a short date and time in the page's language without cutting it.
-        const cut = await evaluate(`[...document.querySelectorAll('.oui-files-row > td:nth-child(4)')].filter(td => td.scrollWidth > td.clientWidth).map(td => td.textContent.trim()).slice(0, 2).join(' | ')`);
+        const cut = await evaluate(`[...document.querySelectorAll('.oui-files-row > td.oui-files-col-modified')].filter(td => td.scrollWidth > td.clientWidth).map(td => td.textContent.trim()).slice(0, 2).join(' | ')`);
         if (cut && width >= 700) bad.push('date cut off: ' + cut);
       }
       if (screen === 'u1-dash' && (!state || state === 'refused')) {
@@ -307,10 +329,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         // OuiFileBrowser: click, Shift-click, Ctrl-click, select all, arrows with Shift, Space, Ctrl+A, Escape, drag onto a folder, Delete with its confirmation.
         const got = await evaluate(`(async () => {
           const tick = () => new Promise(r => setTimeout(r, 60)); const out = [];
+          // 5.14: a row that is only looked at (a plain click) is aria-current, not aria-selected: count() is the ticked rows.
           const rows = () => [...document.querySelectorAll('.oui-files-row')]; const count = () => document.querySelectorAll('.oui-files-row[aria-selected="true"]').length;
+          const seen = () => document.querySelectorAll('.oui-files-row[aria-current]').length;
           const click = (el, o = {}) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, ...o }));
           const key = (el, k, o = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...o }));
-          click(rows()[0]); await tick(); out.push(count());
+          click(rows()[0]); await tick(); out.push(count() + 'look' + seen());
           click(rows()[3], { shiftKey: true }); await tick(); out.push(count());
           click(rows()[1], { ctrlKey: true }); await tick(); out.push(count());
           const head = document.querySelector('.oui-files-table thead input'); head.click(); await tick(); out.push(count()); head.click(); await tick(); out.push(count());
@@ -336,14 +360,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           // 5.0.3: the open folder's own actions sit beside the path (#folder); a read-only folder shows its files and
           // offers neither delete nor move, is not a place to move to, and its rows cannot be dragged.
           const actions = document.querySelector('.oui-files-toolbar > .oui-files-path + .oui-files-folderactions'); out.push(actions ? 'folder-actions' + actions.querySelectorAll('button').length : 'NO-FOLDER-ACTIONS');
-          click(rows()[0]); await tick(); const move = document.querySelector('.oui-files-move'); move?.click(); await wait();
+          click(rows()[0], { ctrlKey: true }); await tick(); const move = document.querySelector('.oui-files-move'); out.push(move ? 'move-offered' : 'NO-MOVE'); move?.click(); await wait();
           out.push([...document.querySelectorAll('.p-select-option')].some(o => /Timelapses/.test(o.textContent)) ? 'READONLY-IS-A-TARGET' : 'not-a-target'); document.body.click(); await tick();
           click(document.querySelector('[data-folder="camera"]')); await wait(); out.push(rows().length); click(rows()[0]); await tick(); out.push(count());
+          // 5.14: looking at a file (a plain click) arms nothing: its box is not ticked and the bar offers no Delete. Ticking it selects it.
+          out.push(document.querySelector('.oui-files-bar .p-button-danger') || rows()[0].querySelector('input').checked ? 'LOOK-ARMS' : 'look-only');
+          rows()[0].querySelector('input').click(); await tick(); out.push(count() + (rows()[0].querySelector('input').checked ? '-ticked' : '-UNTICKED'));
           out.push(document.querySelector('.oui-files-bar .p-button-danger')?.disabled ? 'no-delete' : 'DELETE-ON'); out.push(rows()[0].draggable ? 'DRAGGABLE' : 'fixed');
           out.push(document.querySelector('.oui-files-move')?.classList.contains('p-disabled') === false ? 'MOVE-ON' : 'no-move');
           key(rows()[0], 'Delete'); await wait(); out.push(document.querySelector('[data-dlg="confirm"]') ? 'ASKED' : 'not-asked');
+          // 5.14: with one file looked at and focus moved to another row, Delete asks about the row that has focus.
+          click(document.querySelector('[data-folder="local/gifts"]')); await wait(); click(rows()[0]); await tick(); const other = rows()[1]; other.focus(); key(other, 'ArrowDown'); await tick();
+          const focused = document.activeElement.querySelector('[title]')?.title, lookedAt = rows()[0].querySelector('[title]')?.title; key(document.activeElement, 'Delete'); await wait();
+          const named = [...document.querySelectorAll('.p-dialog .oui-files-names li')].map(li => li.textContent.trim());
+          out.push(named.length === 1 && named[0] === focused && focused !== lookedAt ? 'delete-is-for-the-focused-row' : 'DELETE-FOR ' + named.join('+') + ' focus ' + focused);
+          document.querySelector('[data-dlg="cancel"]')?.click(); await wait(); click(document.querySelector('[data-folder="camera"]')); await wait();
           return out.join(','); })()`);
-        if (got !== '1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,not-a-target,3,1,no-delete,fixed,no-move,not-asked') bad.push('file browser interactions: ' + got);
+        if (got !== '0look1,4,3,10,0,3,2,10,0,drag1,lit,9,asked,9,8,local/chroma/trays,0,asked-at-once,focus-back,8,7,focus-in-list,folder-actions3,move-offered,not-a-target,3,0,look-only,1-ticked,no-delete,fixed,no-move,not-asked,delete-is-for-the-focused-row') bad.push('file browser interactions: ' + got);
       }
       if (screen === 'u1-files' && !state && width >= 1200 && lang === 'en') {
         // 5.2.0: "New folder" beside the path makes one in the open folder, named at the top of the list: a name that is refused says why
@@ -400,6 +433,75 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           const a = box.getBoundingClientRect(), b = own.getBoundingClientRect(); return Math.abs(a.width - b.width) > 1 || Math.abs(a.height - b.height) > 1 ? 'player ' + Math.round(b.width) + 'x' + Math.round(b.height) + ' in a ' + Math.round(a.width) + 'x' + Math.round(a.height) + ' box'
             : Math.abs(a.width / a.height - 16 / 9) > 0.02 ? 'box is not 16:9' : box.dataset.state !== 'live' ? 'state ' + box.dataset.state : box.querySelector('.oui-camera-overlay') ? '' : 'no overlay'; })()`);
         if (got) bad.push('camera: ' + got);
+      }
+      if (screen === 'kit' && !state) {
+        // 5.14, OuiPresetMatch: no score, no reasons, no tags; names without the plugin's prefix and the printer; a warning mark
+        // only on the pick that is not a sure one; the list is names only and picking gives the real name back.
+        const got = await evaluate(`(async () => { const tick = () => new Promise(r => setTimeout(r, 60)); const sure = document.querySelector('[data-test="match-sure"]'), unsure = document.querySelector('[data-test="match-unsure"]'); const out = [];
+          out.push(sure.querySelector('.oui-match-name').textContent.trim() === 'Polymaker PLA Matte' ? 'clean-name' : 'NAME ' + sure.querySelector('.oui-match-name').textContent.trim());
+          out.push(sure.querySelector('.oui-match-unsure') ? 'SURE-MARKED' : 'sure-plain'); out.push(unsure.querySelector('.oui-match-unsure[aria-label]') ? 'unsure-marked' : 'UNSURE-PLAIN');
+          out.push(document.querySelector('.oui-match .oui-chip, .oui-match .oui-status') || /Score|score|Nota|@|_local|Spooler\\//.test(sure.textContent + unsure.querySelector('.oui-match-head').textContent) ? 'LEAK' : 'no-score-no-tags');
+          unsure.querySelector('.oui-match-change').click(); await tick();
+          const names = [...unsure.querySelectorAll('.oui-match-option-name')].map(n => n.textContent.trim()); out.push(names.join('|'));
+          out.push(unsure.querySelectorAll('.oui-match-option .oui-meta').length > 1 || unsure.querySelector('.oui-match-option .oui-chip') ? 'LIST-LEAK' : 'names-only');
+          [...unsure.querySelectorAll('.oui-match-option')].find(o => o.textContent.includes('Silk')).click(); await tick();
+          out.push(unsure.querySelector('.oui-match-name').textContent.trim()); out.push(unsure.querySelector('.oui-match-list') ? 'LIST-OPEN' : 'closed');
+          return out.join(','); })()`);
+        const auto = lang === 'pt-BR' ? 'Automático' : 'Automatic';
+        if (got !== `clean-name,sure-plain,unsure-marked,no-score-no-tags,${auto}|Generic PLA @Snapmaker U1|Generic PLA Silk|Generic PLA @BBL X1C|Generic PLA @Snapmaker U1|Polymaker PLA Matte,names-only,Generic PLA Silk,closed`) bad.push('preset match: ' + got);
+        // An empty slot is one light row without a drawn spool; the saved-copy card shows its path only when opening failed.
+        const parts = await evaluate(`[(() => { const e = document.querySelector('.oui-slot[data-empty]'); return e && !e.querySelector('.oui-spool') && e.getBoundingClientRect().height < 64 ? 'empty-row' : 'EMPTY-TALL'; })(),
+          document.querySelector('[data-test="saved-ok"] [data-test="saved-path"]') ? 'PATH-SHOWN' : 'no-path', document.querySelector('[data-test="saved-failed"] [data-test="saved-path"]') ? 'path-on-failure' : 'NO-PATH',
+          document.querySelector('[data-test="rows"] .oui-listrow[data-selected] [aria-pressed="true"]') ? 'row-pressed' : 'ROW'].join()`);
+        if (parts !== 'empty-row,no-path,path-on-failure,row-pressed') bad.push('5.14 parts: ' + parts);
+      }
+      if (screen === 'notices') {
+        // 5.14: one "Check again" for the list of requirements, none on its rows; details in the normal font.
+        const got = await evaluate(`[document.querySelectorAll('.oui-reqs .oui-req').length, document.querySelectorAll('.oui-req .oui-req-check').length, document.querySelectorAll('.oui-reqs-foot .oui-req-check').length,
+          /mono/i.test(getComputedStyle(document.querySelector('.oui-req-detail')).fontFamily) ? 'MONO' : 'plain'].join()`);
+        if (got !== '3,0,1,plain') bad.push('requirements: ' + got);
+      }
+      if (screen === 'kobra-layout' && !state && width >= 1200) {
+        // 5.14, OuiDashboard outside edit mode: every widget that is not `fill` is exactly as tall as its content, a `fill`
+        // one as tall as its rows; none overlaps another; each sits 12 px under the one above it in its columns.
+        const got = await evaluate(`(() => { const cells = [...document.querySelectorAll('.oui-dash-cell')].map(c => ({ id: c.dataset.widget, fill: 'fill' in c.dataset, r: c.getBoundingClientRect(), p: c.querySelector('.oui-panel').getBoundingClientRect(), body: c.querySelector('.oui-panel-body') }));
+          const bad = [];
+          for (const c of cells) { if (Math.abs(c.r.height - c.p.height) > 1) bad.push(c.id + ' cell ' + Math.round(c.r.height) + ' vs panel ' + Math.round(c.p.height));
+            if (!c.fill && c.body.scrollHeight > c.body.clientHeight + 1) bad.push(c.id + ' clipped'); }
+          for (const a of cells) for (const b of cells) if (a !== b && a.r.left < b.r.right - 1 && b.r.left < a.r.right - 1 && a.r.top < b.r.bottom - 1 && b.r.top < a.r.bottom - 1) bad.push(a.id + ' over ' + b.id);
+          const temps = cells.find(c => c.id === 'temps'), filament = cells.find(c => c.id === 'filament'), camera = cells.find(c => c.id === 'camera');
+          if (temps.r.height > filament.r.height / 2) bad.push('temps stretched to ' + Math.round(temps.r.height));
+          if (Math.abs(camera.r.top - temps.r.bottom - 12) > 1.5 && Math.abs(camera.r.top - cells.find(c => c.id === 'controls').r.bottom - 12) > 1.5) bad.push('camera not under its column: ' + Math.round(camera.r.top));
+          return bad.join('; '); })()`);
+        if (got) bad.push('dashboard packing: ' + got);
+      }
+      if (screen === 'kobra-layout' && (state === 'header' || state === 'lost')) {
+        // 5.14, editTo: the layout controls sit in the page header's actions; a target that is not on the page leaves them over the grid.
+        const got = await evaluate(`[document.querySelector('.oui-pagehead-actions [data-test="dash-edit"]') ? 'in-header' : 'not-in-header', document.querySelector('.oui-dash-board [data-test="dash-edit"]') ? 'over-grid' : 'not-over-grid'].join()`);
+        if (got !== (state === 'header' ? 'in-header,not-over-grid' : 'not-in-header,over-grid')) bad.push('dashboard editTo: ' + got);
+      }
+      if (screen === 'kobra-layout' && state === 'edit') {
+        // 5.14: the layout menu is a menu button (it opens, names its items, and its own click closes it again); a widget's
+        // content growing outside edit mode moves what is under it without a ResizeObserver loop.
+        const got = await evaluate(`(async () => { const tick = ms => new Promise(r => setTimeout(r, ms)); const out = []; const errors = []; addEventListener('error', e => errors.push(e.message));
+          const b = document.querySelector('[data-test="dash-menu"]'); b.click(); await tick(80);
+          out.push(b.getAttribute('aria-expanded') === 'true' && document.querySelector('.oui-menu[aria-label]') ? 'open' : 'NOT-OPEN'); out.push(document.querySelectorAll('.oui-menu [role=menuitem]').length);
+          b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); b.click(); await tick(80); out.push(!document.querySelector('.oui-menu') && b.getAttribute('aria-expanded') === 'false' ? 'closed-by-its-button' : 'STILL-OPEN');
+          document.querySelector('[data-test="dash-cancel"]').click(); await tick(300);
+          const box = id => document.querySelector('.oui-dash-cell[data-widget="' + id + '"]').getBoundingClientRect();
+          const before = box('camera').top; const body = document.querySelector('.oui-dash-cell[data-widget="controls"] .oui-panel-body'); const more = document.createElement('p'); more.style.height = '90px'; body.append(more); await tick(300);
+          // The camera is under Temperatures and Controls: it sits 12 px under the taller of the two, now Controls.
+          const under = Math.max(box('temps').bottom, box('controls').bottom) + 12;
+          out.push(box('camera').top > before + 1 && Math.abs(box('camera').top - under) < 1.5 ? 'neighbour-follows' : 'CAMERA at ' + Math.round(box('camera').top) + ', not ' + Math.round(under)); out.push(errors.length ? 'ERRORS ' + errors.join(' / ') : 'no-loop');
+          return out.join(','); })()`);
+        if (got !== 'open,3,closed-by-its-button,neighbour-follows,no-loop') bad.push('dashboard edit: ' + got);
+      }
+      if (screen.endsWith('-dash') || screen === 'calc-quote') {
+        // 5.14, OuiAppBar: no tab is ever cut or scrolled out of reach, at any width.
+        const got = await evaluate(`(() => { const tabs = [...document.querySelectorAll('.oui-appbar-tab')]; const vw = document.documentElement.clientWidth;
+          const cut = tabs.filter(t => { const r = t.getBoundingClientRect(); return r.left < -0.5 || r.right > vw + 0.5 || t.scrollWidth > t.clientWidth + 1; }).map(t => t.textContent.trim());
+          return cut.length ? 'tabs cut: ' + cut.join(' | ') : ''; })()`);
+        if (got) bad.push(got);
       }
       if (screen === 'kit' && state === 'heads') {
         // No header is wider than its panel, nothing in it sticks out of it or is cut off; where there is room it is one line.

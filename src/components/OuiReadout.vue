@@ -16,7 +16,7 @@ const blank = computed(() => props.value == null || props.value === '');
   <div class="oui-readout" :data-size="size ?? 'md'" :data-incomplete="incomplete || undefined" :data-stale="stale || undefined" :data-icon="icon ? true : undefined">
     <OuiIcon v-if="icon" class="oui-readout-icon" :icon="icon" :size="size === 'sm' ? 14 : 16" tile :tone="stale ? 'neutral' : tone" />
     <div class="oui-label">{{ label }}</div>
-    <div class="oui-readout-value oui-num" :data-tone="tone && !stale && !incomplete ? tone : undefined">
+    <div class="oui-readout-value oui-num" :data-tone="tone && !stale && !incomplete ? tone : undefined" :data-unit="(unit && !blank) || undefined">
       <slot><span v-if="blank" :aria-label="unknownLabel ?? 'unknown'">—</span><template v-else>{{ value }}</template></slot>
       <span v-if="unit && !blank" class="oui-readout-unit">{{ unit }}</span>
     </div>
@@ -30,6 +30,8 @@ const blank = computed(() => props.value == null || props.value === '');
 .oui-readout[data-icon] > .oui-readout-sub { grid-column: 2; }
 .oui-readout-value[data-tone] { color: var(--oui-tone); }
 .oui-readout-value { font-size: var(--oui-text-xl); line-height: 1.15; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
+/* A number and its unit are one thing: they stay on one line, however narrow the column. */
+.oui-readout-value[data-unit] { white-space: nowrap; overflow-wrap: normal; }
 .oui-readout[data-size='sm'] .oui-readout-value { font-size: var(--oui-text-lg); line-height: 1.3; letter-spacing: 0; }
 .oui-readout[data-size='lg'] .oui-readout-value { font-size: var(--oui-text-2xl); letter-spacing: -.015em; }
 .oui-readout[data-size='hero'] { gap: 6px; }

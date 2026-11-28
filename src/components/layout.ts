@@ -48,6 +48,21 @@ export const collides = (a: OuiLayoutItem, b: OuiLayoutItem) =>
 /** Reading order: by row, then column. The narrow single column shows the widgets in this order. */
 export const ordered = (items: readonly OuiLayoutItem[]) => [...items].sort((a, b) => a.y - b.y || a.x - b.x);
 
+/** Where each widget starts, in px from the top, when every column packs on its own (the dashboard outside edit mode):
+ *  a widget sits `gap` under the lowest widget above it that shares a column with it, whatever height those turned out
+ *  to have (`heightOf`, px). Widgets that share no column never move each other, so a tall card does not stretch or
+ *  push the cards beside it. The layout is one without overlaps (validate, move and resize keep it so). */
+export function packTops(items: readonly OuiLayoutItem[], heightOf: (item: OuiLayoutItem) => number, gap: number): Record<string, number> {
+  const placed: { it: OuiLayoutItem; bottom: number }[] = [];
+  const tops: Record<string, number> = {};
+  for (const it of ordered(items)) {
+    const top = Math.max(0, ...placed.filter(p => p.it.x < it.x + it.w && it.x < p.it.x + p.it.w).map(p => p.bottom + gap));
+    tops[it.id] = top;
+    placed.push({ it, bottom: top + Math.max(0, heightOf(it)) });
+  }
+  return tops;
+}
+
 /** Gravity: each widget, in reading order, rises until it would overlap one above it. */
 export function compact(items: readonly OuiLayoutItem[]): OuiLayoutItem[] {
   const placed: OuiLayoutItem[] = [];

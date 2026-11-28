@@ -31,6 +31,57 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.14.0 applies a review of all six plugins' pages: what was wrong in a shared part is fixed here once. Most of it arrives with the update; the list under "To update" is what a plugin has to change.
+
+Layout and cost:
+
+- `OuiDashboard` packs every column on its own outside edit mode. A widget that is not `fill` is as tall as its content, whatever its rows; a `fill` widget (camera, log) is as tall as its rows; each sits 12 px under the widget above it in its own columns (`packTops` in `layout.ts`, tested). A tall card no longer stretches the cards beside it or pushes a camera below the fold. The rows of 32 px are the edit grid, where a row still grows to fit its tallest widget. A camera in a widget taller than its picture sits at the top, not in the middle.
+- Edit mode: the frame's bar names the widget and the module's own header is blank meanwhile (the chip no longer covers the title); the size in grid units shows only while resizing; a widget's settings open in a small panel on the widget under its gear (switches with their name after them, nothing above the grid moves); New, Rename and Delete layout are one labelled menu (`labels.layoutMenu`) beside the Select.
+- `OuiDashboard` `editTo` (a selector or an element, e.g. a `<span>` in the page header's actions): the layout Select and "Edit layout" go there while the dashboard is not edited, instead of taking a row over the cards.
+- `OuiWidget.narrowOrder`: a widget's place in the single column of a narrow window (lower first; the rest follow in reading order).
+- `OuiStatus`: the busy chip's halo animates `transform` and `opacity` on a pseudo-element instead of `box-shadow`. Measured on the reference dashboards with two busy chips, 10 s, main thread: 126 ms and 600 style recalculations before, 6 ms and none after.
+- `OuiAppBar` never cuts a tab. Whether identity, tabs, state and actions fit one line is measured from what is in the bar (not a 760 px breakpoint): the state text gives way first, then the tabs get a line of their own, and in a window narrower than the tabs they wrap. On that second layout the state stays on the first line.
+- `OuiJob` between 640 and 1100 px: name and times together, actions beside them, the bar across the full width. A file name breaks after `_ - .` or a space before it breaks inside a word. New `progressText` (the bar's `aria-valuetext`) and `detailTitle`.
+- `OuiReadout`: a value and its unit stay on one line. `OuiSpool`: a black or charcoal filament has a clear rim on the dark theme. `OuiSlot`: an empty slot is one light row (badge, label, actions), with no drawn spool.
+
+Forms and settings:
+
+- `OuiFormRow`: every control starts at the same left edge (switches and radio groups no longer hug the right edge while fields start on the left); a number field is 220 px wide and a select 220 to 340 px, not as wide as the panel (PrimeVue's `fluid` on either gives it the row's width back); `end` puts a row's control at the right edge as before.
+- `OuiSettings` measures its height again whenever anything beside it or beside one of its ancestors comes, goes or changes size, so a banner over the page that leaves no longer leaves the save bar hanging above the window's edge. `layout="stack"`: every section on one scrolling page with no list of pages, for a plugin with a handful of settings (two columns from 1000 px; each `.oui-stack` in the slot is a column).
+- `OuiSettingsPages` is the `SettingsPages.vue` that five plugins each carried a copy of (list and page take turns under 700 px, focus to the page's heading, a flag on a page with an invalid field), with the same props, `select(id)`, `spg` class and `settings-back` hook, plus `layout="stack"`.
+- `OuiSaveBar` for `OuiSettings`' `#footer`: the unsaved chip, what changed, Discard and Save. Save is off while nothing has changed. It emits `save`, or with `form` (a form's id) submits that form.
+- A heading that takes focus from code draws no focus ring.
+
+Notices:
+
+- `OuiToastHost` is bottom-right (was bottom-left, over the first column's buttons); `position` moves it (`bottom-left`, `top-right`, with `--oui-toast-top`).
+- `OuiBanner` reads from the top: mark, first line, actions and close button share the first line. Without actions the close button's room is kept on the first line only. `delay` (ms) holds a banner back until its condition has lasted that long. `details` (text, or `#details`) puts raw error text behind a closed disclosure (`detailsLabel`, `copyLabel`, `copiedLabel`).
+- `OuiEmpty`: `delay` and `details` the same; `compact` is centred in its place like the block form.
+- `OuiMenu` takes a `label` and works as a menu button's menu (its own button's click closes it).
+- `OuiDetails` is that disclosure on its own; `copyText(text, selectElement?)` is the clipboard helper it uses (async clipboard, then `execCommand`, then selecting the text); `useDelayed(on, ms)` is the delay.
+- `OuiRequirement`: `checkLabel` is optional and `hideCheck` drops the row's button; the detail line is in the normal font. `OuiRequirementList` wraps the rows and has the one "Check again" for all of them.
+- `OuiSavedCopy`: the card for a run that saved a copy of the project (title, when, "Open in OrcaSlicer", "Copy path", one status line, notes). The path shows only when opening failed or the clipboard is refused.
+
+Filament:
+
+- `OuiPresetMatch` shows the preset's name and Change, and nothing about how the match was made: no score chip, no reasons line, no source tags, on the match or on its candidates. When `confident` is false and `labels.review` is given, a small warning mark with that sentence as its tooltip sits beside the name. Names are shown without a plugin's prefix and without the printer (`presetDisplayName(name, keepPrinter?)`, exported and tested); `pick` still gives the real name.
+- `OuiSpoolPick`: every swatch has its name under it up to 24 colours (swatches only above that); `colourName(group)` gives the colour's word in the page language; tooltips and the dialog never show a hex key; `labels.hint` is one line under the swatches; the material filter's buttons are the small control height; rows out of view in a colour's dialog are not laid out or painted.
+
+Files and lists:
+
+- `OuiFileBrowser`: a click on a row looks at the file (the row is marked with `aria-current`, the detail shows it, and it is still the page's `selected`) without ticking its box or offering Delete; the checkbox, Cmd/Ctrl-click and Space select (`aria-selected`). The Delete key acts on the ticked files, else on the row that has focus. `columns` (`OuiFileColumn`) and `OuiFile.cells` add plain columns between the name and the size, shown from 1100 px (880 px without a tree). `viewToggle` false leaves out the list/grid switch. An empty folder is one centred sentence with no header row; its "0 files" stays in the bar for screen readers only.
+- `OuiListRow` (in `<ul class="oui-list">`): a list row with its actions, and `selectable` for a row that is a toggle. `.oui-table`: a read-only table on a plain `<table>` (`th`/`td.oui-num` for figures, `data-dense`).
+- `relativeTime(ms, locale?, now?)`: "now", "5 minutes ago", "yesterday", the date alone after a week, in the page's language. New icon `chevronLeft`.
+
+To update from 5.13:
+
+- Nothing breaks a build: every prop and export of 5.13 is still accepted (the six plugins' sources type-check against 5.14 unchanged). `OuiPresetMatch`'s `score`, `reasons`, `badge`, `labels.score` and a candidate's `score`, `reasons`, `badge` are ignored now; stop passing them, delete the strings that worded them, and give `labels.review`. A candidate's `note` is only the tooltip of a disabled candidate.
+- Page tests that looked for a score or reasons, for `[data-test="dash-new"]`, `dash-rename` or `dash-delete` (now `[data-menu="…"]` items behind `[data-test="dash-menu"]`), for the toast stack on the left, for a ticked box, `aria-selected` or the bulk bar after a plain click on a file row (it is `aria-current` now), for a visible "0 files", or for `style.gridRow` on a dashboard cell outside edit mode (every cell is on row 1 there; the place is its top margin) need the new expectation. A widget's settings are still `[data-test="dash-settings"]` with the same `data-setting` hooks, now inside the widget's cell.
+- Dashboards: give content widgets their real rows only if you care how they sit in edit mode; drop `fill` from a widget whose content has its own shape (an `OuiCamera` keeps 16:9); CSS that stretched a module's content to fill its cell (`flex: 1` chains under `.oui-dash-grid`) no longer has a taller cell to fill.
+- Replace the plugin's `SettingsPages.vue` with `OuiSettingsPages`; a plugin with few settings adds `layout="stack"`. Put `OuiSaveBar` in the footer, or at least bind Save's `disabled` to "nothing changed".
+- Wrap requirement rows in `OuiRequirementList`; move raw error text from banner sentences into `details`; give "waiting" banners a `delay`; replace hand-made saved-copy cards with `OuiSavedCopy`.
+- Remove CSS written around the old parts: a `float` in `.oui-banner-text`, `align-items: flex-start` on a tall banner, `flex-wrap`, `order` or `flex` rules for `.oui-appbar-row`, `.oui-appbar-tabs` and `.oui-appbar-status` (a page's own rules still win over the bar's, so until they are removed the bar looks as that page wrote it), right-aligning or widths for `.oui-formrow-control`, a hint laid over the spool picker's search.
+
 Version 5.13.0 adds `OuiSpoolPick`, a spool picker that asks for the colour first. It is additive; a plugin adopts it by replacing its own spool list or spool Select.
 
 - The picker draws one swatch per colour, with a count when several spools share it, so what it draws grows with the colours on the shelf, not the spools: 2000 spools in 15 colours are 15 CSS circles, no spool renders. A colour with one spool picks it at once; with several, a dialog lists that colour's spools fullest first (grams, a fill bar, vendor, material, `#id`, location) and one is chosen there. `pick` (`id, spool`) is emitted after the dialog has closed and focus is back on the swatch.

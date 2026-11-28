@@ -11,12 +11,19 @@ import { toastList } from './toast';
  *
  * The page is as tall as the window under whatever sits above it, at every height: the selected section scrolls inside
  * and the footer is always on screen. The height follows the viewport in CSS (dvh); the offset above and below is
- * measured again on every resize of the window or of the page, never once at load.
+ * measured again on every resize of the window or of the page, and whenever anything beside it or beside one of its
+ * ancestors comes, goes or changes size (a banner over the page that leaves must not leave the save bar hanging 48 px
+ * above the window's edge), never once at load.
  *
  * The last tab is remembered per page; #<section id> in the address opens that section; `select(id)` opens one from code.
+ *
+ * `layout="stack"` is for a plugin with a handful of settings: no list of pages, every section on the one scrolling
+ * page (in two columns from 1000 px: each `.oui-stack` wrapper in the slot is a column), the footer still on screen.
+ * `select(id)` and #<section id> then scroll to the section. For the save bar itself see OuiSaveBar.
  */
 export interface OuiSettingsSection { id: string; label: string; icon?: OuiIconData; state?: 'warn' | 'error' }
-const props = defineProps<{ sections: OuiSettingsSection[]; navLabel: string }>();
+const props = defineProps<{ sections: OuiSettingsSection[]; navLabel: string; /** `tabs` (default): one section at a time, picked from the list. `stack`: all of them on one page, no list. */ layout?: 'tabs' | 'stack' }>();
+const stacked = () => props.layout === 'stack';
 const root = ref<HTMLElement>();
 const body = ref<HTMLElement>();
 const tabs = ref<HTMLElement>();
@@ -60,11 +67,13 @@ function sync() {
   if (!body.value) return;
   for (const s of props.sections) {
     const el = body.value.querySelector<HTMLElement>(`#${CSS.escape(s.id)}`);
-    if (el) el.hidden = s.id !== current.value;
+    if (el) el.hidden = !stacked() && s.id !== current.value;
   }
 }
+watch(() => props.layout, sync, { flush: 'post' });
 watch(current, (id) => {
   sync();
+  if (stacked()) { body.value?.querySelector<HTMLElement>(`#${CSS.escape(id)}`)?.scrollIntoView?.({ block: 'start' }); return; }
   body.value?.scrollTo?.({ top: 0 });
   tabs.value?.querySelector<HTMLElement>(`[data-section="${CSS.escape(id)}"]`)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   try { localStorage.setItem(storeKey(), id); } catch { /* not remembered */ }
@@ -72,6 +81,7 @@ watch(current, (id) => {
 
 function select(id: string, focusTab = false) {
   if (!known(id)) return;
+  if (stacked() && current.value === id) body.value?.querySelector<HTMLElement>(`#${CSS.escape(id)}`)?.scrollIntoView?.({ block: 'start' });
   current.value = id;
   if (focusTab) nextTick(() => tabs.value?.querySelector<HTMLElement>(`[data-section="${CSS.escape(id)}"]`)?.focus());
 }
@@ -124,14 +134,33 @@ let frame = 0;
 const remeasure = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; measure(); }); };
 // Focus moving into a hidden section (a validation error, a link, a search) opens that section's tab.
 function onFocusIn(event: FocusEvent) {
+  if (stacked()) return;   // every section is showing
   const target = event.target as HTMLElement | null;
   const section = props.sections.find(s => target?.closest(`#${CSS.escape(s.id)}`));
   if (section && section.id !== current.value) current.value = section.id;
 }
-let mutations: MutationObserver | undefined; let sizes: ResizeObserver | undefined;
+let mutations: MutationObserver | undefined; let sizes: ResizeObserver | undefined; let around: MutationObserver | undefined;
+// What can move the settings without resizing the window: anything beside it, or beside one of its ancestors, that
+// comes, goes or changes size (a banner over the page, a notice under it). Each of those is watched for size, and each
+// ancestor for children coming and going, which wires the watch again.
+function watchAround() {
+  if (!sizes || !root.value) return;
+  sizes.disconnect(); around?.disconnect();
+  sizes.observe(document.body);
+  for (let node: HTMLElement | null = root.value; node && node !== document.documentElement; node = node.parentElement) {
+    const parent: HTMLElement | null = node.parentElement;
+    if (!parent) break;
+    // Not <body>'s own children: what comes and goes there is overlays (a Select's list, a dialog), which move nothing.
+    if (parent !== document.body) around?.observe(parent, { childList: true });
+    sizes.observe(parent);
+    for (const sibling of Array.from(parent.children)) if (sibling !== node) sizes.observe(sibling);
+  }
+  remeasure();
+}
 const onHash = () => { const id = fromHash(); if (known(id)) select(id); };
 onMounted(() => {
   sync();
+  if (stacked() && known(fromHash())) body.value?.querySelector<HTMLElement>(`#${CSS.escape(current.value)}`)?.scrollIntoView?.({ block: 'start' });
   if (body.value && typeof MutationObserver !== 'undefined') {
     mutations = new MutationObserver(sync);
     mutations.observe(body.value, { childList: true, subtree: true });
@@ -148,12 +177,12 @@ onMounted(() => {
     footSizes.observe(document.body);
     if (root.value) footSizes.observe(root.value);
     sizes = new ResizeObserver(remeasure);
-    sizes.observe(document.body);
-    if (root.value?.parentElement) sizes.observe(root.value.parentElement);
+    if (typeof MutationObserver !== 'undefined') around = new MutationObserver(watchAround);
+    watchAround();
   }
 });
 onBeforeUnmount(() => {
-  mutations?.disconnect(); sizes?.disconnect(); footSizes?.disconnect(); cancelAnimationFrame(liftFrame);
+  mutations?.disconnect(); sizes?.disconnect(); around?.disconnect(); footSizes?.disconnect(); cancelAnimationFrame(liftFrame);
   window.removeEventListener('resize', relift); window.removeEventListener('scroll', relift);
   if (footSet) document.documentElement.style.removeProperty('--oui-toast-bottom');
   cancelAnimationFrame(frame);
@@ -161,8 +190,8 @@ onBeforeUnmount(() => {
 });
 </script>
 <template>
-  <div ref="root" class="oui-settings"><div class="oui-settings-grid">
-    <nav class="oui-settings-nav" :aria-label="navLabel">
+  <div ref="root" class="oui-settings"><div class="oui-settings-grid" :data-layout="layout === 'stack' ? 'stack' : undefined">
+    <nav v-if="layout !== 'stack'" class="oui-settings-nav" :aria-label="navLabel">
       <div ref="tabs" class="oui-settings-tabs" role="tablist" aria-orientation="vertical" :aria-label="navLabel" @keydown="onKey">
         <button v-for="s in sections" :key="s.id" type="button" role="tab" class="oui-settings-link" :id="'oui-settings-tab-' + s.id" :data-section="s.id"
           :aria-selected="current === s.id" :aria-current="current === s.id ? 'true' : undefined" aria-controls="oui-settings-panel"
@@ -172,7 +201,8 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </nav>
-    <div id="oui-settings-panel" ref="body" class="oui-settings-body" role="tabpanel" :aria-labelledby="'oui-settings-tab-' + current" tabindex="-1"><slot /></div>
+    <div id="oui-settings-panel" ref="body" class="oui-settings-body" :role="layout === 'stack' ? 'region' : 'tabpanel'" :aria-labelledby="layout === 'stack' ? undefined : 'oui-settings-tab-' + current"
+      :aria-label="layout === 'stack' ? navLabel : undefined" tabindex="-1"><slot /></div>
     <footer v-if="$slots.footer" ref="foot" class="oui-settings-foot"><slot name="footer" /></footer>
   </div></div>
 </template>
@@ -201,8 +231,15 @@ onBeforeUnmount(() => {
 .oui-settings-body > .oui-stack { display: contents; }
 .oui-settings-foot { grid-area: foot; position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--oui-s2) var(--oui-s3);
   margin-inline: calc(-1 * var(--oui-s4)); padding: var(--oui-s2) var(--oui-s4); background: var(--oui-surface); border-top: 1px solid var(--oui-border); box-shadow: 0 -6px 16px rgb(0 0 0 / .12); }
+/* Stack: no list; every section on the one page. From 1000 px two columns, each `.oui-stack` wrapper a column. */
+.oui-settings-grid[data-layout='stack'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: 'body' 'foot'; }
+.oui-settings-grid[data-layout='stack'] > .oui-settings-body { max-width: 1280px; }
+@container oui-settings (min-width: 1000px) {
+  .oui-settings-grid[data-layout='stack'] > .oui-settings-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oui-settings-grid[data-layout='stack'] > .oui-settings-body > .oui-stack { display: grid; }
+}
 @container oui-settings (max-width: 820px) {
-  .oui-settings-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: 'nav' 'body' 'foot'; }
+  .oui-settings-grid:not([data-layout='stack']) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: 'nav' 'body' 'foot'; }
   .oui-settings-nav { overflow: visible; }
   .oui-settings-tabs { display: flex; gap: var(--oui-s1); overflow-x: auto; padding-bottom: var(--oui-s2); scrollbar-width: none; }
   .oui-settings-link { flex: none; width: auto; }

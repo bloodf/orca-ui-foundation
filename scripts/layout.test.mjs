@@ -1,7 +1,7 @@
 // Unit tests of the dashboard's layout model (src/components/layout.ts): node --test scripts/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COLS, add, cleanItems, collides, compact, fit, freeSpot, minHeight, move, nameProblem, ordered, remove, replaceRetired, resize, rowsByWidth, validate } from '../src/components/layout.ts';
+import { COLS, add, cleanItems, collides, compact, fit, freeSpot, minHeight, move, nameProblem, ordered, packTops, remove, replaceRetired, resize, rowsByWidth, validate } from '../src/components/layout.ts';
 
 const SPECS = [
   { id: 'job', w: 12, h: 3, minW: 4, minH: 2 },
@@ -135,4 +135,16 @@ test('a layout still exactly as an earlier default gets the new default; arrange
   for (const x of [undefined, null, 'x', { v: 1 }]) assert.equal(replaceRetired(x, [OLD], NEW), x);
   const kept = { v: 1, active: 0, layouts: [{ name: 'Mine', items: mine }] };
   assert.equal(replaceRetired(kept, [OLD], NEW), kept, 'nothing to replace: the same object');
+});
+
+test('packTops packs every column on its own: a tall card moves only what is under it', () => {
+  // job across the top; a tall card on the left; two short ones stacked on the right; a full-width card under both.
+  const items = [{ id: 'job', x: 0, y: 0, w: 12, h: 2 }, { id: 'tall', x: 0, y: 2, w: 7, h: 8 }, { id: 'a', x: 7, y: 2, w: 5, h: 4 }, { id: 'b', x: 7, y: 6, w: 5, h: 4 }, { id: 'foot', x: 0, y: 10, w: 12, h: 2 }];
+  const px = { job: 100, tall: 900, a: 60, b: 200, foot: 50 };
+  const tops = packTops(items, it => px[it.id], 12);
+  assert.deepEqual(tops, { job: 0, tall: 112, a: 112, b: 184, foot: 1024 });
+  // The same layout with a short left card: the right column does not change, the foot rises to the taller column.
+  assert.deepEqual(packTops(items, it => ({ ...px, tall: 80 })[it.id], 12), { job: 0, tall: 112, a: 112, b: 184, foot: 396 });
+  // Order given does not matter, and a widget that shares no column with any other starts at the top.
+  assert.deepEqual(packTops([{ id: 'r', x: 6, y: 5, w: 6, h: 1 }, { id: 'l', x: 0, y: 0, w: 6, h: 9 }], () => 40, 12), { l: 0, r: 0 });
 });

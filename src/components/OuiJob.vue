@@ -3,28 +3,33 @@ import { computed } from 'vue';
 
 /*
  * A running or finished job (a print, an arrange run) as one compact status block: a small picture, what it is, how far,
- * the times, and what you can do to it. One row when there is room, two under 1100 px, stacked under 640 px. It is a
+ * the times, and what you can do to it. One row when there is room; from 640 to 1100 px the name with the times under
+ * it, the actions beside them and the bar across the full width under both; stacked under 640 px. It is a
  * neutral block: the only colour is the state chip and OrcaSlicer's teal in the bar. Unknown progress is an indeterminate
  * bar and a dash, not 0 %. A `stale` job (last known values) is drawn grey.
  */
 const props = defineProps<{ name: string; /** 0..100, or null when the job reports no fraction. */ progress?: number | null;
   progressLabel?: string; /** Replaces the percentage (for counted work: "7 of 14"). */ count?: string; detail?: string;
+  /** What a screen reader says for the bar instead of the percentage ("7 of 14 parts"). */ progressText?: string;
+  /** The detail line's tooltip (the line is cut with an ellipsis when it is long); default: the detail itself. */ detailTitle?: string;
   /** Always stacked and smaller: for the dock. */ compact?: boolean; /** @deprecated 5.0: there is no filled hero; the block is the same everywhere. */ hero?: boolean;
   /** Last known values of a job the page can no longer see. */ stale?: boolean }>();
 const known = computed(() => typeof props.progress === 'number' && Number.isFinite(props.progress));
 const pct = computed(() => (known.value ? Math.max(0, Math.min(100, props.progress as number)) : 0));
+// A file name breaks after a separator ("benchy_PLA_", "0.2mm.") before it breaks inside a word.
+const nameParts = computed(() => props.name.match(/[^_\-. ]*[_\-. ]*/g)?.filter(Boolean) ?? [props.name]);
 </script>
 <template>
   <div class="oui-job" :data-compact="compact || undefined" :data-stale="stale || undefined"><div class="oui-job-block" :data-thumb="$slots.thumb ? true : undefined">
     <div v-if="$slots.thumb" class="oui-job-thumb"><slot name="thumb" /></div>
     <div class="oui-job-id">
       <div v-if="$slots.status" class="oui-job-status"><slot name="status" /></div>
-      <p class="oui-job-name" :title="name">{{ name }}</p>
-      <p v-if="detail" class="oui-job-detail oui-num oui-truncate">{{ detail }}</p>
+      <p class="oui-job-name" :title="name"><template v-for="(part, i) in nameParts" :key="i"><wbr v-if="i">{{ part }}</template></p>
+      <p v-if="detail" class="oui-job-detail oui-num oui-truncate" :title="detailTitle ?? detail">{{ detail }}</p>
     </div>
     <div class="oui-job-progress">
       <div class="oui-job-figure oui-num"><template v-if="count">{{ count }}</template><template v-else-if="known">{{ Math.round(pct) }}<span>%</span></template><span v-else aria-hidden="true">—</span></div>
-      <div class="oui-job-bar" role="progressbar" :aria-label="progressLabel ?? name" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="known ? Math.round(pct) : undefined"
+      <div class="oui-job-bar" role="progressbar" :aria-label="progressLabel ?? name" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="known ? Math.round(pct) : undefined" :aria-valuetext="progressText"
         :data-indeterminate="!known || undefined"><span :style="known ? { width: pct + '%' } : undefined" /></div>
     </div>
     <div v-if="$slots.default" class="oui-job-stats"><slot /></div>
@@ -42,7 +47,8 @@ const pct = computed(() => (known.value ? Math.max(0, Math.min(100, props.progre
 .oui-job-thumb > :is(img, svg) { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .oui-job-id { display: grid; gap: 2px; min-width: 0; }
 .oui-job-status { margin-bottom: 2px; }
-/* File names are long and their end matters (material, time): two lines, broken anywhere, before an ellipsis. */
+/* File names are long and their end matters (material, time): two lines, broken after a separator where there is one
+   (see nameParts) and anywhere otherwise, before an ellipsis. */
 .oui-job-name { font-size: var(--oui-text-lg); font-weight: 700; line-height: 1.3; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .oui-job-detail { font-size: var(--oui-text-sm); color: var(--oui-muted); }
 .oui-job-progress { display: flex; align-items: center; gap: var(--oui-s3); min-width: 0; }
@@ -53,17 +59,20 @@ const pct = computed(() => (known.value ? Math.max(0, Math.min(100, props.progre
 .oui-job-bar[data-indeterminate] > span { width: 32%; animation: oui-slide 1.4s var(--oui-ease) infinite; }
 .oui-job-stats { display: flex; flex-wrap: wrap; align-items: center; gap: var(--oui-s2) var(--oui-s5); }
 .oui-job-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--oui-s2); }
+/* 640 to 1100 px: what it is and its times together on the left, the actions beside them, the bar under all of it. */
 @container oui-job (min-width: 640px) {
-  .oui-job:not([data-compact]) > .oui-job-block { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); }
-  .oui-job:not([data-compact]) > .oui-job-block > :is(.oui-job-id, .oui-job-progress, .oui-job-stats, .oui-job-actions) { grid-column: auto; }
-  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] > .oui-job-thumb { grid-row: span 2; }
-  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-actions { justify-content: flex-end; }
+  .oui-job:not([data-compact]) > .oui-job-block { grid-template-columns: minmax(0, 1fr) fit-content(48%); grid-template-areas: 'id actions' 'stats actions' 'progress progress'; }
+  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] { grid-template-columns: auto minmax(0, 1fr) fit-content(48%); grid-template-areas: 'thumb id actions' 'thumb stats actions' 'progress progress progress'; }
+  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-thumb { grid-area: thumb; align-self: start; }
+  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-id { grid-area: id; }
+  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-stats { grid-area: stats; }
+  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-progress { grid-area: progress; }
+  .oui-job:not([data-compact]) > .oui-job-block > .oui-job-actions { grid-area: actions; align-self: start; justify-content: flex-end; }
 }
 @container oui-job (min-width: 1100px) {
-  .oui-job:not([data-compact]) > .oui-job-block { grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.1fr) auto auto; }
-  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] { grid-template-columns: auto minmax(180px, 1fr) minmax(220px, 1.1fr) auto auto; }
-  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] > .oui-job-thumb { grid-row: auto; }
+  .oui-job:not([data-compact]) > .oui-job-block { grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.1fr) auto auto; grid-template-areas: none; }
+  .oui-job:not([data-compact]) > .oui-job-block[data-thumb] { grid-template-columns: auto minmax(180px, 1fr) minmax(220px, 1.1fr) auto auto; grid-template-areas: none; }
+  .oui-job:not([data-compact]) > .oui-job-block > :is(.oui-job-thumb, .oui-job-id, .oui-job-progress, .oui-job-stats, .oui-job-actions) { grid-area: auto; align-self: auto; }
 }
 .oui-job[data-compact] .oui-job-block { gap: var(--oui-s2); }
 .oui-job[data-compact] .oui-job-name { font-size: var(--oui-text-md); -webkit-line-clamp: 1; line-clamp: 1; }

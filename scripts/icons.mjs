@@ -21,7 +21,7 @@ const version = JSON.parse(await readFile(resolve(root, 'node_modules/lucide-sta
 const LUCIDE = {
   check: 'check', x: 'x', plus: 'plus', minus: 'minus', warning: 'triangle-alert', error: 'circle-x', info: 'info', circleCheck: 'circle-check',
   clock: 'clock', history: 'history', timer: 'timer', hourglass: 'hourglass', calendar: 'calendar', offline: 'wifi-off', plug: 'plug', zap: 'zap',
-  chevronDown: 'chevron-down', chevronRight: 'chevron-right', refresh: 'refresh-cw', rotate: 'rotate-cw', search: 'search', filter: 'funnel',
+  chevronDown: 'chevron-down', chevronRight: 'chevron-right', chevronLeft: 'chevron-left', refresh: 'refresh-cw', rotate: 'rotate-cw', search: 'search', filter: 'funnel',
   settings: 'sliders-horizontal', wrench: 'wrench', dashboard: 'layout-dashboard', files: 'files', file: 'file-text', folder: 'folder', folderPlus: 'folder-plus', grid: 'layout-grid', list: 'list',
   // The file browser's actions, one family: rename (a pencil on a line), move into a folder, list and grid as layouts.
   rename: 'pencil-line', folderMove: 'folder-input', selectAll: 'list-checks', viewList: 'layout-list', viewGrid: 'layout-grid',

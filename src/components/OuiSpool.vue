@@ -46,12 +46,19 @@ const paint = computed(() => {
   }
   return 'linear-gradient(90deg, ' + cs.map((c, i) => `${c} ${(i * 100) / cs.length}% ${((i + 1) * 100) / cs.length}%`).join(', ') + ')';
 });
+// A filament about as dark as the reel (black, charcoal): on the dark theme the whole spool would be a dark shape on a
+// dark card, so it gets a brighter rim there (data-dark).
+const dark = computed(() => {
+  if (props.colors && props.colors.length > 1) return false;
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec((props.color || props.colors?.[0] || '').trim());
+  return !!m && level.value < 8 && 0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16) < 60;
+});
 // Plain pixels on the element itself: the box never depends on a custom property or aspect-ratio being supported.
 const px = computed(() => `${props.size ?? 40}px`);
 const mark = computed(() => Math.max(13, Math.round((props.size ?? 40) * 0.36)));
 </script>
 <template>
-  <span class="oui-spool" :data-level="level" :data-unknown="unknown || undefined" :style="{ width: px, height: px, '--oui-spool-paint': paint }" aria-hidden="true">
+  <span class="oui-spool" :data-level="level" :data-unknown="unknown || undefined" :data-dark="dark || undefined" :style="{ width: px, height: px, '--oui-spool-paint': paint }" aria-hidden="true">
     <img class="oui-spool-body" :src="body" alt="" width="160" height="160" draggable="false" />
     <span v-if="wind" class="oui-spool-wind" :style="{ '--oui-spool-map': `url(${wind})` }"><img :src="wind" alt="" width="160" height="160" draggable="false" /></span>
     <span v-if="unknown" class="oui-spool-unknown" :style="{ width: `${mark}px`, height: `${mark}px`, fontSize: `${Math.round(mark * 0.72)}px` }">?</span>
@@ -75,4 +82,8 @@ const mark = computed(() => Math.max(13, Math.round((props.size ?? 40) * 0.36)))
   background: radial-gradient(closest-side, rgb(0 0 0 / .28), transparent); }
 /* The reel is black: on the dark theme it gets a soft light rim so it does not disappear into the card. */
 .orca-dark .oui-spool-body { filter: drop-shadow(0 0 .6px rgb(255 255 255 / .55)) drop-shadow(0 0 6px rgb(255 255 255 / .1)); }
+/* A black or charcoal filament on that reel: a clear rim around the whole spool and a lighter winding, so it reads as a
+   spool (and as a dark one) at 28 px in a table row. */
+.orca-dark .oui-spool[data-dark] .oui-spool-body { filter: drop-shadow(0 0 .7px rgb(255 255 255 / .95)) drop-shadow(0 0 1.2px rgb(255 255 255 / .6)) drop-shadow(0 0 6px rgb(255 255 255 / .14)); }
+.orca-dark .oui-spool[data-dark] .oui-spool-wind { background: linear-gradient(rgb(255 255 255 / .16), rgb(255 255 255 / .16)), var(--oui-spool-paint); }
 </style>

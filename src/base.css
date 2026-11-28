@@ -46,6 +46,9 @@ body.orca-ui > #app > :where(:only-child, .oui-page, main) { flex: 1 0 auto; }
 .orca-ui ::selection { color: var(--oui-on-primary); background: var(--oui-primary); }
 .orca-ui :where(table, output, .oui-num, .oui-number, .p-inputnumber-input) { font-variant-numeric: tabular-nums; }
 .orca-ui :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--oui-primary-mark); outline-offset: 2px; }
+/* A heading given focus from code (a settings page just opened, for screen readers) is not a control: no ring on it.
+   Roving items (tabs, rows) are tabindex="-1" too and keep theirs. */
+.orca-ui :where(h1, h2, h3, h4, h5, h6)[tabindex='-1']:focus-visible { outline: none; }
 .orca-ui :where(input, select, textarea) { scroll-margin-block: 80px; }
 
 /* Text roles */
@@ -72,7 +75,18 @@ body.orca-ui > #app > :where(:only-child, .oui-page, main) { flex: 1 0 auto; }
     clamp(50% - var(--oui-cards-gap), (var(--oui-cards-2, 440px) - 100%) * 999, 100%)), 1fr)); }
 .oui-field { display: grid; gap: var(--oui-s1); min-width: 0; }
 .oui-field > label { font-size: var(--oui-text-sm); font-weight: 600; color: var(--oui-muted); }
-.oui-table-wrap { max-width: 100%; overflow: auto; }
+.oui-table-wrap { position: relative; max-width: 100%; overflow: auto; }
+/* A read-only table of data (quotes, stock, a comparison): the palette's hairlines and label type on a plain <table>, for
+   a page that needs no sorting, paging or selection (PrimeVue's DataTable is about 240 kB for those). Figures go in
+   th/td.oui-num (right-aligned); data-dense for a table inside a card. Wrap it in .oui-table-wrap to scroll sideways. */
+.oui-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.oui-table th { padding: 6px var(--oui-s3); text-align: start; font-size: var(--oui-text-xs); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  color: var(--oui-muted); background: var(--oui-raised); border-bottom: 1px solid var(--oui-border); }
+.oui-table td { height: 40px; padding: 6px var(--oui-s3); border-bottom: 1px solid var(--oui-border); }
+.oui-table tbody tr:last-child td { border-bottom: 0; }
+.oui-table :is(th, td).oui-num { text-align: end; }
+.oui-table[data-dense] { font-size: var(--oui-text-sm); }
+.oui-table[data-dense] :is(th, td) { height: 30px; padding-block: 4px; }
 
 /* Tone: any element with data-tone gets a colour (--oui-tone), its tint (--oui-tone-soft) and the colour that sits on
    it when it is a solid fill (--oui-tone-on). Icons, chips, sparks and bars read these three, so a hue is chosen once per
