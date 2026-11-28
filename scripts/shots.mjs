@@ -43,6 +43,8 @@ export const SCENES = [
   ...both('kit', 'heads', [[380, 700], TAB]), ['kit', 'heads', 'dark', 'pt-BR', 380, 700], ['kit', 'heads', 'dark', 'en', 280, 600],
   ...both('kit', '', [TAB]), ['kit', '', 'dark', 'en', ...WIDE], ...both('kit', 'colour', [[1600, 1000]]), ...both('kit', 'icons', [[1600, 1000]]), ...both('kit', 'art', [[1600, 1000]]), ['kit', '', 'dark', 'en', 1280, 720, 2],
   ['kobra-dash', '', 'dark', 'en', ...WIDE, 'system'], ['calc-quote', '', 'light', 'en', ...TAB, 'system'],
+  // 5.13: the colour-first spool picker, and the dialog of one colour's spools.
+  ...both('spool-pick', '', [TAB]), ...both('spool-pick', 'dialog', [TAB]), ['spool-pick', '', 'dark', 'pt-BR', 380, 700], ['spool-pick', 'dialog', 'light', 'pt-BR', 380, 700],
   ...['dark', 'light'].flatMap(theme => [['notices', '', theme, 'en', 1280, 720, 'toasts'], ['notices', '', theme, 'pt-BR', 380, 700, 'toasts']]),
 ];
 // A trailing 'system' renders without the optional brand face, for comparison.
