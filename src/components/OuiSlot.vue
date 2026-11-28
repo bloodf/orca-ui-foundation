@@ -10,6 +10,8 @@ import OuiLevel from './OuiLevel.vue';
  * quiet row in a dashed frame: its badge, the empty label and its actions; no strip, no drawn spool, and as tall as that
  * row, not as its full neighbours.
  * The amount is grams left of grams total with a level bar; give `#amount` to show anything else, or nothing.
+ * `#name` replaces the text of the name line (slot props `name`, `empty`): for a page whose name is itself a control, such
+ * as the trigger of its spool picker.
  * Per-slot reasons for disabled actions do not belong here: the page says the reason once (OuiBanner).
  */
 const props = defineProps<{ label: string; /** Toolhead identity colour 1..4; omit for plain numbered slots. */ tool?: 1 | 2 | 3 | 4;
@@ -38,7 +40,7 @@ const grams = (n: number) => { try { return Math.round(n).toLocaleString(documen
     <div class="oui-slot-main">
       <OuiSpool v-if="!empty" :color="color" :colors="colors" :fraction="fraction" :size="52" />
       <div class="oui-slot-id">
-        <p class="oui-slot-name" :title="name ?? undefined">{{ empty ? emptyLabel : name || material }}</p>
+        <p class="oui-slot-name" :title="name ?? undefined"><slot name="name" :name="name" :empty="empty">{{ empty ? emptyLabel : name || material }}</slot></p>
         <p v-if="!empty" class="oui-meta oui-truncate"><slot name="meta">{{ material }}</slot></p>
       </div>
     </div>

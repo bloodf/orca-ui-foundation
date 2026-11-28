@@ -454,12 +454,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           document.querySelector('[data-test="saved-ok"] [data-test="saved-path"]') ? 'PATH-SHOWN' : 'no-path', document.querySelector('[data-test="saved-failed"] [data-test="saved-path"]') ? 'path-on-failure' : 'NO-PATH',
           document.querySelector('[data-test="rows"] .oui-listrow[data-selected] [aria-pressed="true"]') ? 'row-pressed' : 'ROW'].join()`);
         if (parts !== 'empty-row,no-path,path-on-failure,row-pressed') bad.push('5.14 parts: ' + parts);
+        // 5.14.1: the one-line preset match (the name is the trigger and opens the list); a saved copy already asked for.
+        const more = await evaluate(`(async () => { const m = document.querySelector('[data-test="match-inline"]'), b = m.querySelector('button.oui-match-trigger'), s = document.querySelector('[data-test="saved-asked"]'); const out = [];
+          out.push(b && !m.querySelector('.oui-match-head') && b.textContent.trim() === '3D Procer PLA Verde escuro' ? 'name-is-trigger' : 'TRIGGER ' + b?.textContent.trim()); out.push(b.getBoundingClientRect().height <= 28 ? 'one-line' : 'TALL');
+          b.click(); await new Promise(r => setTimeout(r, 60)); out.push(m.querySelectorAll('.oui-match-option').length + '-options'); b.click(); await new Promise(r => setTimeout(r, 60));
+          const open = s.querySelector('#kit-open'); out.push(open?.classList.contains('p-button-secondary') ? 'open-secondary' : 'OPEN-PRIMARY'); out.push(s.querySelector('.oui-saved-status .oui-status[data-state="warn"]') ? 'status-warn' : 'STATUS-PLAIN');
+          out.push(!s.querySelector('.oui-label') && document.getElementById(s.getAttribute('aria-labelledby'))?.classList.contains('oui-saved-title') ? 'named-by-title' : 'NAME'); out.push(getComputedStyle(s).paddingTop === '0px' ? 'bare' : 'CARD');
+          return out.join(','); })()`);
+        if (more !== 'name-is-trigger,one-line,2-options,open-secondary,status-warn,named-by-title,bare') bad.push('5.14.1 parts: ' + more);
       }
       if (screen === 'notices') {
         // 5.14: one "Check again" for the list of requirements, none on its rows; details in the normal font.
         const got = await evaluate(`[document.querySelectorAll('.oui-reqs .oui-req').length, document.querySelectorAll('.oui-req .oui-req-check').length, document.querySelectorAll('.oui-reqs-foot .oui-req-check').length,
           /mono/i.test(getComputedStyle(document.querySelector('.oui-req-detail')).fontFamily) ? 'MONO' : 'plain'].join()`);
-        if (got !== '3,0,1,plain') bad.push('requirements: ' + got);
+        if (got !== '4,0,1,plain') bad.push('requirements: ' + got);
+        // 5.14.1: optional and missing is a neutral chip, and still says how to get it.
+        const opt = await evaluate(`(() => { const r = document.querySelector('[data-test="req-optional"]'); return [r.querySelector('.oui-status').dataset.state, r.querySelector('.oui-req-install') ? 'install' : 'NO-INSTALL'].join(); })()`);
+        if (opt !== 'idle,install') bad.push('optional requirement: ' + opt);
       }
       if (screen === 'kobra-layout' && !state && width >= 1200) {
         // 5.14, OuiDashboard outside edit mode: every widget that is not `fill` is exactly as tall as its content, a `fill`

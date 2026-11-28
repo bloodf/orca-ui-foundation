@@ -225,6 +225,9 @@ const wide = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.
           <OuiPresetMatch :name="matched" :confident="false" remembered data-test="match-unsure" :labels="matchLabels" @pick="matched = $event ?? 'Generic PLA @Snapmaker U1'"
             :candidates="[{ name: 'Spooler/Generic PLA @Snapmaker U1' }, { name: 'Generic PLA Silk @Snapmaker U1' }, { name: 'Generic PLA @BBL X1C' }, { name: 'Generic PLA @Snapmaker U1' },
                           { name: 'Polymaker PLA Matte @Snapmaker U1', disabled: true, note: t('Made for another nozzle', 'Feito para outro bico') }]" />
+          <!-- 5.14.1: one line, the name is the Change trigger. -->
+          <OuiPresetMatch inline name="_local/spooler/3D Procer PLA Verde escuro @Snapmaker U1" :confident="false" :labels="matchLabels" data-test="match-inline"
+            :candidates="[{ name: '_local/spooler/3D Procer PLA Verde escuro @Snapmaker U1' }, { name: 'Generic PLA @Snapmaker U1' }]" />
         </div>
       </OuiPanel>
 
@@ -238,6 +241,9 @@ const wide = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.
           <OuiSavedCopy :title="t('Desk organizer · 3 pockets added', 'Organizador de mesa · 3 bolsos adicionados')" :meta="relativeTime(NOW - 26 * 3_600_000)" failed
             path="$HOME/Library/Application Support/OrcaSlicer/plugins/storage/desk-organizer-pockets-20261110-101500-9a2c41.3mf" :labels="savedLabels"
             :status="t('OrcaSlicer could not open the copy. Open it from this folder:', 'O OrcaSlicer não abriu a cópia. Abra a partir desta pasta:')" data-test="saved-failed" />
+          <!-- 5.14.1: already asked (Open is secondary), the status as a warning, no heading, no card of its own. -->
+          <OuiSavedCopy :title="t('Desk organizer · plate 2 arranged', 'Organizador de mesa · placa 2 arrumada')" asked bare open-id="kit-open" status-state="warn" data-test="saved-asked"
+            :labels="{ open: t('Open again', 'Abrir de novo') }" :status="t('OrcaSlicer has unsaved changes: save or discard them, then open the copy.', 'O OrcaSlicer tem alterações não salvas: salve ou descarte e abra a cópia.')" />
         </div>
       </OuiPanel>
 

@@ -31,6 +31,13 @@ import { refresh } from '@orca-plugins/ui-foundation/src/icons';
 
 Tags are releases: never move or delete a pushed tag; fix forward with a new version.
 
+Version 5.14.1 adds what the plugins asked for while adopting 5.14.0. It is additive: nothing has to change.
+
+- `OuiSavedCopy`: `asked` (OrcaSlicer was already asked to open the copy: Open is a secondary button; label it "Open again"), `statusState` (the status line as a state with its mark and colour, wrapping) and a `#status` slot, `bare` (no card of its own, for inside a panel), `openId` (the Open button's id). `labels.heading` is optional: without it the title names the section.
+- `OuiRequirement` `optional`: something the plugin works without. Missing, its chip is neutral, not a warning, and how to get it is still shown.
+- `OuiSlot` `#name` slot (props `name`, `empty`): the name line as a control, such as a spool picker's trigger.
+- `OuiPresetMatch` `inline`: one line, the name itself is the Change trigger.
+
 Version 5.14.0 applies a review of all six plugins' pages: what was wrong in a shared part is fixed here once. Most of it arrives with the update; the list under "To update" is what a plugin has to change.
 
 Layout and cost:
