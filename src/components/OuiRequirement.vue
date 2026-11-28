@@ -19,13 +19,16 @@ import { link, refresh } from '../icons';
  * "Check again" looks at everything again, so a list of rows has one, not one per row: put the rows in an
  * OuiRequirementList (its rows drop their own button), or leave out `checkLabel` (or set `hideCheck`) and render one
  * yourself. A row on its own keeps its button.
+ * `optional`: something the plugin works without (another plugin, a stock server). Missing, it is not a warning: the chip
+ * is neutral, and how to get it is still shown.
  */
 const props = defineProps<{ name: string; /** What the plugin uses it for. */ why?: string;
   status: 'found' | 'missing' | 'checking' | 'unknown'; /** The status chip text ("Found", "Not found"). */ statusLabel: string;
   /** Where it was found, or what was found ("/usr/bin/ffmpeg · 7.1"). */ detail?: string;
   /** How to install it, one line. */ installText?: string; installUrl?: string; installLabel?: string;
   /** The row's own "Check again"; without it (or with `hideCheck`, or in an OuiRequirementList) the row has no button. */ checkLabel?: string; hideCheck?: boolean;
-  checking?: boolean; /** Check again is off (nothing to check against yet); the row still shows. */ disabled?: boolean }>();
+  checking?: boolean; /** Check again is off (nothing to check against yet); the row still shows. */ disabled?: boolean;
+  /** The plugin works without it: missing is a neutral chip, not a warning. */ optional?: boolean }>();
 const inList = inject(OUI_REQ_LIST, undefined);
 const emit = defineEmits<{ check: []; open: [url: string] }>();
 const STATE = { found: 'ok', missing: 'warn', checking: 'busy', unknown: 'idle' } as const;
@@ -37,7 +40,7 @@ function onLink(event: MouseEvent) {
 }
 </script>
 <template>
-  <div class="oui-req" :data-status="status">
+  <div class="oui-req" :data-status="status" :data-optional="optional || undefined">
     <div class="oui-req-id">
       <p class="oui-req-name">{{ name }}</p>
       <p v-if="why" class="oui-meta">{{ why }}</p>
@@ -48,7 +51,7 @@ function onLink(event: MouseEvent) {
       </p>
     </div>
     <div class="oui-req-side">
-      <OuiStatus :state="STATE[status]">{{ statusLabel }}</OuiStatus>
+      <OuiStatus :state="optional && status === 'missing' ? 'idle' : STATE[status]">{{ statusLabel }}</OuiStatus>
       <button v-if="checkLabel && !hideCheck && !inList" type="button" class="oui-req-check" :disabled="disabled || checking || status === 'checking'" @click="emit('check')">
         <OuiIcon :icon="refresh" :size="14" /><span>{{ checkLabel }}</span>
       </button>

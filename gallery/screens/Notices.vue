@@ -55,6 +55,9 @@ onMounted(() => {
         install-url="https://ffmpeg.org/download.html" install-label="ffmpeg.org" />
         <OuiRequirement name="Spoolman" :why="t('Stock, and booking filament use after a print.', 'Estoque, e lançar o consumo depois de imprimir.')"
         status="checking" :status-label="t('Checking…', 'Verificando…')" />
+        <!-- 5.14.1: optional and absent is not a warning. -->
+        <OuiRequirement name="Spooler" optional :why="t('Uses your Spoolman spools as OrcaSlicer filament presets.', 'Usa suas bobinas do Spoolman como presets de filamento do OrcaSlicer.')"
+        status="missing" :status-label="t('Not connected', 'Não conectado')" :install-text="t('Get it from Orca Cloud.', 'Baixe no Orca Cloud.')" data-test="req-optional" />
       </OuiRequirementList>
     </OuiFormSection>
     <OuiPanel :title="t('Toasts', 'Avisos')" :icon="infoIcon">
